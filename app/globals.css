@@ -145,14 +145,6 @@
   height: 0;
 }
 
-.tiptap .is-empty::before {
-  content: attr(data-placeholder);
-  float: left;
-  color: var(--muted-foreground);
-  pointer-events: none;
-  height: 0;
-}
-
 /* Focus mode: fade unfocused blocks */
 .focus-mode .tiptap > *:not(.has-focus) {
   opacity: 0.3;

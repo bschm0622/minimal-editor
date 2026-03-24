@@ -5,30 +5,21 @@ interface FilePickerAcceptType {
   accept: Record<string, string[]>;
 }
 
-interface OpenFilePickerOptionsLike {
-  types?: FilePickerAcceptType[];
-  excludeAcceptAllOption?: boolean;
-}
-
 interface SaveFilePickerOptionsLike {
   suggestedName?: string;
   types?: FilePickerAcceptType[];
 }
-
-type ShowOpenFilePicker = (
-  options?: OpenFilePickerOptionsLike
-) => Promise<FileSystemFileHandle[]>;
 
 type ShowSaveFilePicker = (
   options?: SaveFilePickerOptionsLike
 ) => Promise<FileSystemFileHandle>;
 
 interface FilePickerWindow {
-  showOpenFilePicker?: ShowOpenFilePicker;
   showSaveFilePicker?: ShowSaveFilePicker;
 }
 
 const pickerWindow = globalThis as unknown as FilePickerWindow;
+const encoder = new TextEncoder();
 
 const markdownPickerTypes: FilePickerAcceptType[] = [
   {
@@ -41,20 +32,34 @@ const markdownPickerTypes: FilePickerAcceptType[] = [
 ];
 
 export async function openFile(): Promise<string | null> {
-  try {
-    const picker = pickerWindow.showOpenFilePicker;
-    if (!picker) return null;
+  if (typeof document === "undefined") return null;
 
-    const [handle] = await picker({
-      types: markdownPickerTypes,
-      excludeAcceptAllOption: false,
-    });
-    useEditorStore.getState().setFileHandle(handle);
-    const file = await handle.getFile();
-    return await file.text();
-  } catch {
-    return null;
-  }
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".md,.markdown,.txt,text/markdown,text/plain";
+    input.style.display = "none";
+
+    input.addEventListener(
+      "change",
+      async () => {
+        const file = input.files?.[0];
+        input.remove();
+
+        if (!file) {
+          resolve(null);
+          return;
+        }
+
+        useEditorStore.getState().setFileHandle(null);
+        resolve(await file.text());
+      },
+      { once: true }
+    );
+
+    document.body.appendChild(input);
+    input.click();
+  });
 }
 
 export async function saveFile(content: string): Promise<boolean> {
@@ -63,7 +68,8 @@ export async function saveFile(content: string): Promise<boolean> {
 
   try {
     const writable = await handle.createWritable();
-    await writable.write(content);
+    await writable.truncate(0);
+    await writable.write(encoder.encode(content));
     await writable.close();
     useEditorStore.getState().markSaved();
     return true;
@@ -83,23 +89,12 @@ export async function saveFileAs(content: string): Promise<boolean> {
     });
     useEditorStore.getState().setFileHandle(handle);
     const writable = await handle.createWritable();
-    await writable.write(content);
+    await writable.truncate(0);
+    await writable.write(encoder.encode(content));
     await writable.close();
     useEditorStore.getState().markSaved();
     return true;
   } catch {
     return false;
   }
-}
-
-let fileSaveTimeout: ReturnType<typeof setTimeout> | null = null;
-
-export function debouncedFileSync(content: string) {
-  const handle = useEditorStore.getState().fileHandle;
-  if (!handle) return;
-
-  if (fileSaveTimeout) clearTimeout(fileSaveTimeout);
-  fileSaveTimeout = setTimeout(() => {
-    saveFile(content);
-  }, 1000);
 }

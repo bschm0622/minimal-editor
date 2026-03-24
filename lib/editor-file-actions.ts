@@ -1,5 +1,5 @@
 import type { Editor } from "@tiptap/core";
-import { useEditorStore } from "./editor-store";
+import { flushSavedContent, useEditorStore } from "./editor-store";
 import { openFile, saveFile, saveFileAs } from "./file-sync";
 import { htmlToMarkdown, markdownToHtml } from "./markdown";
 
@@ -24,7 +24,15 @@ export async function openMarkdownFileIntoStore() {
   const nextContent = await openFile();
   if (nextContent === null) return false;
 
-  useEditorStore.getState().loadContent(markdownToHtml(nextContent));
+  const html = markdownToHtml(nextContent);
+  const { editor, loadContent } = useEditorStore.getState();
+
+  loadContent(html);
+
+  if (editor && editor.getHTML() !== html) {
+    editor.commands.setContent(html, { emitUpdate: false });
+  }
+
   return true;
 }
 
@@ -41,18 +49,48 @@ async function saveMarkdownToFile(markdown: string) {
   return didSave;
 }
 
-export async function saveStoreContentToFile() {
-  const content = useEditorStore.getState().content;
-  return saveMarkdownToFile(htmlToMarkdown(content));
+function getCurrentHtml() {
+  const { editor, content } = useEditorStore.getState();
+  return editor ? editor.getHTML() : content;
+}
+
+function getCurrentMarkdown() {
+  return htmlToMarkdown(getCurrentHtml());
+}
+
+export async function saveCurrentDraftToFile() {
+  const { setContent } = useEditorStore.getState();
+  const html = getCurrentHtml();
+
+  setContent(html);
+  flushSavedContent(html);
+
+  return saveMarkdownToFile(htmlToMarkdown(html));
+}
+
+export async function saveCurrentDraftToNewFile() {
+  const { setContent, setFileHandle } = useEditorStore.getState();
+  const html = getCurrentHtml();
+
+  setContent(html);
+  flushSavedContent(html);
+  setFileHandle(null);
+
+  const didSave = await saveFileAs(htmlToMarkdown(html));
+
+  if (didSave) {
+    notifyManualFileSave();
+  }
+
+  return didSave;
 }
 
 export async function saveEditorContentToFile(editor: Editor) {
   return saveMarkdownToFile(htmlToMarkdown(editor.getHTML()));
 }
 
-export async function copyStoreContentAsMarkdown() {
-  const content = useEditorStore.getState().content;
-  await navigator.clipboard.writeText(htmlToMarkdown(content));
+export async function copyCurrentDraftAsMarkdown() {
+  await navigator.clipboard.writeText(getCurrentMarkdown());
 }
 
 export async function copyEditorContentAsMarkdown(editor: Editor) {

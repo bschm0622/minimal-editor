@@ -56,7 +56,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
   return (
     <BubbleMenu
       editor={editor}
-      className="flex items-center gap-0.5 rounded-xl border border-border bg-background p-1 shadow-lg"
+      className="flex max-w-[calc(100vw-1rem)] flex-wrap items-center gap-0.5 rounded-xl border border-border bg-background p-1 shadow-lg sm:max-w-none sm:flex-nowrap"
       onMouseDown={(event) => event.preventDefault()}
     >
       {/* Inline formatting */}

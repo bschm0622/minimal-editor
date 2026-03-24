@@ -3,21 +3,25 @@
 import { useCallback, useEffect, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  CheckmarkCircle01Icon,
   Copy01Icon,
   FloppyDiskIcon,
   FolderOpenIcon,
   CenterFocusIcon,
+  HelpCircleIcon,
   Moon02Icon,
   QuillWrite02Icon,
+  RefreshDotIcon,
   Sun01Icon,
   TextFontIcon,
 } from "@hugeicons/core-free-icons";
 import { useEditorStore, type EditorFont } from "@/lib/editor-store";
 import {
-  copyStoreContentAsMarkdown,
+  copyCurrentDraftAsMarkdown,
   MANUAL_FILE_SAVE_EVENT,
   openMarkdownFileIntoStore,
-  saveStoreContentToFile,
+  saveCurrentDraftToFile,
+  saveCurrentDraftToNewFile,
 } from "@/lib/editor-file-actions";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -29,6 +33,9 @@ import {
 import {
   Popover,
   PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
 
@@ -38,8 +45,25 @@ const FONT_OPTIONS: { value: EditorFont; label: string; sample: string }[] = [
   { value: "mono", label: "Monospace", sample: "Aa" },
 ];
 
+const HELP_SHORTCUTS = [
+  { key: "/", description: "Open the block menu" },
+  { key: "#, ##, ###", description: "Create headings" },
+  { key: "Cmd/Ctrl + O", description: "Open a Markdown file" },
+  { key: "Cmd/Ctrl + S", description: "Save to file" },
+  { key: "Cmd/Ctrl + Shift + S", description: "Save as..." },
+  { key: "Cmd/Ctrl + Shift + C", description: "Copy as Markdown" },
+];
+
+const HELP_FEATURES = [
+  "Your draft autosaves in this browser.",
+  "Paste Markdown to turn it into rich text.",
+  "Files only change when you use Save or Save as....",
+  "After you choose a file, Save keeps writing to that file in this tab.",
+  "Use Save as... to switch files.",
+];
+
 export function Toolbar() {
-  const { fileHandle, focusMode, font, toggleFocusMode, setFont } =
+  const { fileHandle, focusMode, font, isSaved, toggleFocusMode, setFont } =
     useEditorStore();
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -101,13 +125,19 @@ export function Toolbar() {
   }, [isDark]);
 
   const handleSave = useCallback(async () => {
-    if (await saveStoreContentToFile()) {
+    if (await saveCurrentDraftToFile()) {
+      setExpanded(false);
+    }
+  }, []);
+
+  const handleSaveAs = useCallback(async () => {
+    if (await saveCurrentDraftToNewFile()) {
       setExpanded(false);
     }
   }, []);
 
   const handleCopyMarkdown = useCallback(async () => {
-    await copyStoreContentAsMarkdown();
+    await copyCurrentDraftAsMarkdown();
   }, []);
 
   const handleOpenFile = useCallback(async () => {
@@ -161,6 +191,39 @@ export function Toolbar() {
         <Tooltip>
           <TooltipTrigger
             render={
+              <div className="hidden items-center sm:flex">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={
+                    isSaved ? "Draft saved locally" : "Saving draft locally"
+                  }
+                  className={
+                    isSaved
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-amber-500 dark:text-amber-400"
+                  }
+                  disabled
+                >
+                  <HugeiconsIcon
+                    icon={isSaved ? CheckmarkCircle01Icon : RefreshDotIcon}
+                    size={18}
+                    strokeWidth={1.5}
+                  />
+                </Button>
+              </div>
+            }
+          />
+          <TooltipContent>
+            {isSaved
+              ? "Draft saved in this browser"
+              : "Saving draft..."}
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger
+            render={
               <Button
                 variant="ghost"
                 size="icon-sm"
@@ -181,14 +244,14 @@ export function Toolbar() {
                 variant="ghost"
                 size="icon-sm"
                 onClick={handleSave}
-                aria-label={fileHandle ? "Save to file" : "Save file"}
+                aria-label={fileHandle ? "Save to current file" : "Save as"}
               />
             }
           >
             <HugeiconsIcon icon={FloppyDiskIcon} size={18} strokeWidth={1.5} />
           </TooltipTrigger>
           <TooltipContent>
-            {fileHandle ? "Save to file" : "Save file"}
+            {fileHandle ? "Save to file" : "Save as..."}
           </TooltipContent>
         </Tooltip>
 
@@ -302,6 +365,87 @@ export function Toolbar() {
           </TooltipTrigger>
           <TooltipContent>{isDark ? "Light mode" : "Dark mode"}</TooltipContent>
         </Tooltip>
+
+        <Popover>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <PopoverTrigger
+                  render={
+                    <Button variant="ghost" size="icon-sm" aria-label="Help" />
+                  }
+                >
+                  <HugeiconsIcon
+                    icon={HelpCircleIcon}
+                    size={18}
+                    strokeWidth={1.5}
+                  />
+                </PopoverTrigger>
+              }
+            />
+            <TooltipContent>Help</TooltipContent>
+          </Tooltip>
+          <PopoverContent
+            className="w-[min(24rem,calc(100vw-1rem))] gap-3 p-3"
+            side="bottom"
+            align="end"
+          >
+            <PopoverHeader className="gap-1">
+              <PopoverTitle>Help</PopoverTitle>
+              <PopoverDescription>
+                A few useful rules, kept out of the way.
+              </PopoverDescription>
+            </PopoverHeader>
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                Shortcuts
+              </p>
+              <div className="space-y-2">
+                {HELP_SHORTCUTS.map((item) => (
+                  <div
+                    key={item.key}
+                    className="flex items-start justify-between gap-3 text-sm"
+                  >
+                    <span className="text-foreground">{item.description}</span>
+                    <code className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                      {item.key}
+                    </code>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                File behavior
+              </p>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                {HELP_FEATURES.map((item) => (
+                  <p key={item}>{item}</p>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-foreground">
+                  {fileHandle
+                    ? "Save will write to the current file."
+                    : "Save will ask you to choose a file."}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {fileHandle
+                    ? "Use Save as... if you want to switch files. Draft autosave stays local."
+                    : "After that, Save keeps writing to the same file in this tab."}
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleSaveAs}>
+                Save as...
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div

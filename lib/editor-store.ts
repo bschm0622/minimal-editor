@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { Editor } from "@tiptap/core";
 
 const STORAGE_KEY = "minimal-editor-content";
 const FOCUS_MODE_KEY = "minimal-editor-focus-mode";
@@ -7,6 +8,7 @@ const FONT_KEY = "minimal-editor-font";
 export type EditorFont = "sans" | "serif" | "mono";
 
 interface EditorState {
+  editor: Editor | null;
   content: string;
   isSaved: boolean;
   fileHandle: FileSystemFileHandle | null;
@@ -18,6 +20,7 @@ interface EditorState {
   loadContent: (content: string) => void;
   markSaved: () => void;
   notifyManualSave: () => void;
+  setEditor: (editor: Editor | null) => void;
   setFileHandle: (handle: FileSystemFileHandle | null) => void;
   toggleFocusMode: () => void;
   setFont: (font: EditorFont) => void;
@@ -25,6 +28,7 @@ interface EditorState {
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
+  editor: null,
   content: "",
   isSaved: true,
   fileHandle: null,
@@ -47,6 +51,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   notifyManualSave: () => {
     set({ lastManualSaveAt: Date.now() });
+  },
+
+  setEditor: (editor: Editor | null) => {
+    set({ editor });
   },
 
   setFileHandle: (handle: FileSystemFileHandle | null) => {
@@ -95,9 +103,18 @@ let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 export function debouncedSave(content: string) {
   if (saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, content);
-      useEditorStore.getState().markSaved();
-    } catch {}
+    flushSavedContent(content);
   }, 500);
+}
+
+export function flushSavedContent(content: string) {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+    saveTimeout = null;
+  }
+
+  try {
+    localStorage.setItem(STORAGE_KEY, content);
+    useEditorStore.getState().markSaved();
+  } catch {}
 }

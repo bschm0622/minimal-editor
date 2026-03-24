@@ -5,6 +5,7 @@ import type { Editor } from "@tiptap/core";
 import {
   copyEditorContentAsMarkdown,
   openMarkdownFileIntoStore,
+  saveCurrentDraftToNewFile,
   saveEditorContentToFile,
 } from "./editor-file-actions";
 
@@ -16,6 +17,16 @@ export function useEditorKeyboardShortcuts(editor: Editor | null) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "o") {
         event.preventDefault();
         await openMarkdownFileIntoStore();
+        return;
+      }
+
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.shiftKey &&
+        event.key.toLowerCase() === "s"
+      ) {
+        event.preventDefault();
+        await saveCurrentDraftToNewFile();
         return;
       }
 
