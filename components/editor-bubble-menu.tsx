@@ -32,16 +32,20 @@ import { Separator } from "@/components/ui/separator";
 export function EditorBubbleMenu({ editor }: { editor: Editor }) {
   const [linkUrl, setLinkUrl] = useState("");
   const [linkOpen, setLinkOpen] = useState(false);
+  const focusEditor = useCallback(
+    () => editor.chain().focus(undefined, { scrollIntoView: false }),
+    [editor]
+  );
 
   const setLink = useCallback(() => {
     if (linkUrl) {
-      editor.chain().focus().setLink({ href: linkUrl }).run();
+      focusEditor().setLink({ href: linkUrl }).run();
     } else {
-      editor.chain().focus().unsetLink().run();
+      focusEditor().unsetLink().run();
     }
     setLinkOpen(false);
     setLinkUrl("");
-  }, [editor, linkUrl]);
+  }, [focusEditor, linkUrl]);
 
   const openLinkPopover = useCallback(() => {
     const existing = editor.getAttributes("link").href || "";
@@ -53,12 +57,13 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
     <BubbleMenu
       editor={editor}
       className="flex items-center gap-0.5 rounded-xl border border-border bg-background p-1 shadow-lg"
+      onMouseDown={(event) => event.preventDefault()}
     >
       {/* Inline formatting */}
       <Toggle
         size="sm"
         pressed={editor.isActive("bold")}
-        onPressedChange={() => editor.chain().focus().toggleBold().run()}
+        onPressedChange={() => focusEditor().toggleBold().run()}
         aria-label="Bold"
       >
         <HugeiconsIcon icon={TextBoldIcon} size={16} strokeWidth={2} />
@@ -66,7 +71,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
       <Toggle
         size="sm"
         pressed={editor.isActive("italic")}
-        onPressedChange={() => editor.chain().focus().toggleItalic().run()}
+        onPressedChange={() => focusEditor().toggleItalic().run()}
         aria-label="Italic"
       >
         <HugeiconsIcon icon={TextItalicIcon} size={16} strokeWidth={2} />
@@ -74,7 +79,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
       <Toggle
         size="sm"
         pressed={editor.isActive("underline")}
-        onPressedChange={() => editor.chain().focus().toggleUnderline().run()}
+        onPressedChange={() => focusEditor().toggleUnderline().run()}
         aria-label="Underline"
       >
         <HugeiconsIcon icon={TextUnderlineIcon} size={16} strokeWidth={2} />
@@ -82,7 +87,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
       <Toggle
         size="sm"
         pressed={editor.isActive("strike")}
-        onPressedChange={() => editor.chain().focus().toggleStrike().run()}
+        onPressedChange={() => focusEditor().toggleStrike().run()}
         aria-label="Strikethrough"
       >
         <HugeiconsIcon
@@ -94,7 +99,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
       <Toggle
         size="sm"
         pressed={editor.isActive("code")}
-        onPressedChange={() => editor.chain().focus().toggleCode().run()}
+        onPressedChange={() => focusEditor().toggleCode().run()}
         aria-label="Inline code"
       >
         <HugeiconsIcon icon={CodeIcon} size={16} strokeWidth={2} />
@@ -106,9 +111,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
       <Toggle
         size="sm"
         pressed={editor.isActive("heading", { level: 1 })}
-        onPressedChange={() =>
-          editor.chain().focus().toggleHeading({ level: 1 }).run()
-        }
+        onPressedChange={() => focusEditor().toggleHeading({ level: 1 }).run()}
         aria-label="Heading 1"
       >
         <HugeiconsIcon icon={Heading01Icon} size={16} strokeWidth={2} />
@@ -116,9 +119,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
       <Toggle
         size="sm"
         pressed={editor.isActive("heading", { level: 2 })}
-        onPressedChange={() =>
-          editor.chain().focus().toggleHeading({ level: 2 }).run()
-        }
+        onPressedChange={() => focusEditor().toggleHeading({ level: 2 }).run()}
         aria-label="Heading 2"
       >
         <HugeiconsIcon icon={Heading02Icon} size={16} strokeWidth={2} />
@@ -126,9 +127,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
       <Toggle
         size="sm"
         pressed={editor.isActive("heading", { level: 3 })}
-        onPressedChange={() =>
-          editor.chain().focus().toggleHeading({ level: 3 }).run()
-        }
+        onPressedChange={() => focusEditor().toggleHeading({ level: 3 }).run()}
         aria-label="Heading 3"
       >
         <HugeiconsIcon icon={Heading03Icon} size={16} strokeWidth={2} />
@@ -140,9 +139,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
       <Toggle
         size="sm"
         pressed={editor.isActive("bulletList")}
-        onPressedChange={() =>
-          editor.chain().focus().toggleBulletList().run()
-        }
+        onPressedChange={() => focusEditor().toggleBulletList().run()}
         aria-label="Bullet list"
       >
         <HugeiconsIcon
@@ -154,9 +151,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
       <Toggle
         size="sm"
         pressed={editor.isActive("orderedList")}
-        onPressedChange={() =>
-          editor.chain().focus().toggleOrderedList().run()
-        }
+        onPressedChange={() => focusEditor().toggleOrderedList().run()}
         aria-label="Numbered list"
       >
         <HugeiconsIcon
@@ -168,9 +163,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
       <Toggle
         size="sm"
         pressed={editor.isActive("blockquote")}
-        onPressedChange={() =>
-          editor.chain().focus().toggleBlockquote().run()
-        }
+        onPressedChange={() => focusEditor().toggleBlockquote().run()}
         aria-label="Blockquote"
       >
         <HugeiconsIcon
@@ -182,9 +175,7 @@ export function EditorBubbleMenu({ editor }: { editor: Editor }) {
       <Toggle
         size="sm"
         pressed={editor.isActive("codeBlock")}
-        onPressedChange={() =>
-          editor.chain().focus().toggleCodeBlock().run()
-        }
+        onPressedChange={() => focusEditor().toggleCodeBlock().run()}
         aria-label="Code block"
       >
         <HugeiconsIcon

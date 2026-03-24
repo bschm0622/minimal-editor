@@ -6,15 +6,15 @@ import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions/placeholder";
 import { Focus } from "@tiptap/extensions/focus";
 import { useEditorStore, debouncedSave } from "@/lib/editor-store";
-import { debouncedFileSync, openFile, saveFile, saveFileAs } from "@/lib/file-sync";
+import { debouncedFileSync } from "@/lib/file-sync";
 import { htmlToMarkdown } from "@/lib/markdown";
+import { useEditorKeyboardShortcuts } from "@/lib/use-editor-keyboard-shortcuts";
 import { EditorBubbleMenu } from "./editor-bubble-menu";
 import { SlashCommands } from "./slash-command";
 import { cn } from "@/lib/utils";
 
 export function Editor() {
-  const { content, focusMode, font, hydrate, hydrated, loadContent } =
-    useEditorStore();
+  const { content, focusMode, font, hydrate, hydrated } = useEditorStore();
   const initialContentAppliedRef = useRef(false);
 
   const editor = useEditor({
@@ -45,6 +45,8 @@ export function Editor() {
     },
   });
 
+  useEditorKeyboardShortcuts(editor);
+
   // Hydrate from localStorage on mount
   useEffect(() => {
     hydrate();
@@ -68,42 +70,6 @@ export function Editor() {
 
     editor.commands.setContent(content, { emitUpdate: false });
   }, [editor, content, hydrated]);
-
-  // Keyboard shortcuts for file actions and Markdown copy.
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      if (!editor) return;
-
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "o") {
-        e.preventDefault();
-        const nextContent = await openFile();
-        if (nextContent === null) return;
-        loadContent(nextContent);
-        return;
-      }
-
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
-        e.preventDefault();
-        const markdown = htmlToMarkdown(editor.getHTML());
-        const fileHandle = useEditorStore.getState().fileHandle;
-
-        if (fileHandle) {
-          await saveFile(markdown);
-        } else {
-          await saveFileAs(markdown);
-        }
-        return;
-      }
-
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "c") {
-        e.preventDefault();
-        const markdown = htmlToMarkdown(editor.getHTML());
-        await navigator.clipboard.writeText(markdown);
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [editor, loadContent]);
 
   const handleContainerClick = useCallback(() => {
     if (editor && !editor.isFocused) {

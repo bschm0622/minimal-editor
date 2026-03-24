@@ -13,9 +13,11 @@ interface EditorState {
   focusMode: boolean;
   font: EditorFont;
   hydrated: boolean;
+  lastManualSaveAt: number;
   setContent: (content: string) => void;
   loadContent: (content: string) => void;
   markSaved: () => void;
+  notifyManualSave: () => void;
   setFileHandle: (handle: FileSystemFileHandle | null) => void;
   toggleFocusMode: () => void;
   setFont: (font: EditorFont) => void;
@@ -29,6 +31,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   focusMode: false,
   font: "sans" as EditorFont,
   hydrated: false,
+  lastManualSaveAt: 0,
 
   setContent: (content: string) => {
     set({ content, isSaved: false });
@@ -40,6 +43,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   markSaved: () => {
     set({ isSaved: true });
+  },
+
+  notifyManualSave: () => {
+    set({ lastManualSaveAt: Date.now() });
   },
 
   setFileHandle: (handle: FileSystemFileHandle | null) => {

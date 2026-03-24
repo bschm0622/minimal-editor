@@ -13,8 +13,12 @@ import {
   TextFontIcon,
 } from "@hugeicons/core-free-icons";
 import { useEditorStore, type EditorFont } from "@/lib/editor-store";
-import { openFile, saveFile, saveFileAs } from "@/lib/file-sync";
-import { htmlToMarkdown } from "@/lib/markdown";
+import {
+  copyStoreContentAsMarkdown,
+  MANUAL_FILE_SAVE_EVENT,
+  openMarkdownFileIntoStore,
+  saveStoreContentToFile,
+} from "@/lib/editor-file-actions";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -35,7 +39,7 @@ const FONT_OPTIONS: { value: EditorFont; label: string; sample: string }[] = [
 ];
 
 export function Toolbar() {
-  const { fileHandle, focusMode, font, toggleFocusMode, setFont, loadContent } =
+  const { fileHandle, focusMode, font, toggleFocusMode, setFont } =
     useEditorStore();
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -63,14 +67,31 @@ export function Toolbar() {
   }, [isDark]);
 
   useEffect(() => {
-    if (!showSaveConfirmation) return;
+    const handleManualSave = () => {
+      setShowSaveConfirmation(true);
+      const timeout = window.setTimeout(() => {
+        setShowSaveConfirmation(false);
+      }, 1200);
 
-    const timeout = window.setTimeout(() => {
-      setShowSaveConfirmation(false);
-    }, 1200);
+      return timeout;
+    };
 
-    return () => window.clearTimeout(timeout);
-  }, [showSaveConfirmation]);
+    let timeout: number | null = null;
+    const listener = () => {
+      if (timeout) {
+        window.clearTimeout(timeout);
+      }
+      timeout = handleManualSave();
+    };
+
+    window.addEventListener(MANUAL_FILE_SAVE_EVENT, listener);
+    return () => {
+      window.removeEventListener(MANUAL_FILE_SAVE_EVENT, listener);
+      if (timeout) {
+        window.clearTimeout(timeout);
+      }
+    };
+  }, []);
 
   const toggleTheme = useCallback(() => {
     const next = !isDark;
@@ -80,31 +101,20 @@ export function Toolbar() {
   }, [isDark]);
 
   const handleSave = useCallback(async () => {
-    const content = useEditorStore.getState().content;
-    const markdown = htmlToMarkdown(content);
-    const didSave = fileHandle
-      ? await saveFile(markdown)
-      : await saveFileAs(markdown);
-
-    if (didSave) {
-      setShowSaveConfirmation(true);
+    if (await saveStoreContentToFile()) {
       setExpanded(false);
     }
-  }, [fileHandle]);
+  }, []);
 
   const handleCopyMarkdown = useCallback(async () => {
-    const content = useEditorStore.getState().content;
-    const markdown = htmlToMarkdown(content);
-    await navigator.clipboard.writeText(markdown);
+    await copyStoreContentAsMarkdown();
   }, []);
 
   const handleOpenFile = useCallback(async () => {
-    const nextContent = await openFile();
-    if (nextContent === null) return;
-
-    loadContent(nextContent);
-    setExpanded(false);
-  }, [loadContent]);
+    if (await openMarkdownFileIntoStore()) {
+      setExpanded(false);
+    }
+  }, []);
 
   return (
     <header
@@ -170,22 +180,6 @@ export function Toolbar() {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={handleCopyMarkdown}
-                aria-label="Copy as Markdown"
-              />
-            }
-          >
-            <HugeiconsIcon icon={Copy01Icon} size={18} strokeWidth={1.5} />
-          </TooltipTrigger>
-          <TooltipContent>Copy as Markdown</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
                 onClick={handleSave}
                 aria-label={fileHandle ? "Save to file" : "Save file"}
               />
@@ -196,6 +190,22 @@ export function Toolbar() {
           <TooltipContent>
             {fileHandle ? "Save to file" : "Save file"}
           </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={handleCopyMarkdown}
+                aria-label="Copy as Markdown"
+              />
+            }
+          >
+            <HugeiconsIcon icon={Copy01Icon} size={18} strokeWidth={1.5} />
+          </TooltipTrigger>
+          <TooltipContent>Copy as Markdown</TooltipContent>
         </Tooltip>
 
         <Separator orientation="vertical" className="mx-1 h-5" />
