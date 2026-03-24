@@ -72,6 +72,7 @@ export async function saveFile(content: string): Promise<boolean> {
     await writable.write(encoder.encode(content));
     await writable.close();
     useEditorStore.getState().markSaved();
+    useEditorStore.getState().markFileSaved();
     return true;
   } catch {
     return false;
@@ -93,6 +94,7 @@ export async function saveFileAs(content: string): Promise<boolean> {
     await writable.write(encoder.encode(content));
     await writable.close();
     useEditorStore.getState().markSaved();
+    useEditorStore.getState().markFileSaved();
     return true;
   } catch {
     return false;

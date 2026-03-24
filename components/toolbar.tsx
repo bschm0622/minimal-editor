@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
-  CheckmarkCircle01Icon,
   Copy01Icon,
   FloppyDiskIcon,
   FolderOpenIcon,
@@ -11,7 +10,6 @@ import {
   HelpCircleIcon,
   Moon02Icon,
   QuillWrite02Icon,
-  RefreshDotIcon,
   Sun01Icon,
   TextFontIcon,
 } from "@hugeicons/core-free-icons";
@@ -57,13 +55,14 @@ const HELP_SHORTCUTS = [
 const HELP_FEATURES = [
   "Your draft autosaves in this browser.",
   "Paste Markdown to turn it into rich text.",
+  "The Save button shows whether your file is up to date.",
   "Files only change when you use Save or Save as....",
   "After you choose a file, Save keeps writing to that file in this tab.",
   "Use Save as... to switch files.",
 ];
 
 export function Toolbar() {
-  const { fileHandle, focusMode, font, isSaved, toggleFocusMode, setFont } =
+  const { fileHandle, focusMode, font, fileDirty, toggleFocusMode, setFont } =
     useEditorStore();
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -146,6 +145,18 @@ export function Toolbar() {
     }
   }, []);
 
+  const fileStatusClassName = !fileHandle
+    ? "bg-border"
+    : fileDirty
+      ? "bg-amber-500"
+      : "bg-emerald-500";
+
+  const fileStatusLabel = !fileHandle
+    ? "No file selected"
+    : fileDirty
+      ? "File has unsaved changes"
+      : "File is up to date";
+
   return (
     <header
       className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between px-4 py-3"
@@ -177,6 +188,17 @@ export function Toolbar() {
             size={18}
             strokeWidth={1.5}
           />
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span
+                  aria-label={fileStatusLabel}
+                  className={`ml-2 size-2 rounded-full transition-colors ${fileStatusClassName}`}
+                />
+              }
+            />
+            <TooltipContent>{fileStatusLabel}</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -188,39 +210,6 @@ export function Toolbar() {
             : "pointer-events-none translate-y-[-60%] opacity-0 sm:-translate-y-1"
         }`}
       >
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <div className="hidden items-center sm:flex">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={
-                    isSaved ? "Draft saved locally" : "Saving draft locally"
-                  }
-                  className={
-                    isSaved
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-amber-500 dark:text-amber-400"
-                  }
-                  disabled
-                >
-                  <HugeiconsIcon
-                    icon={isSaved ? CheckmarkCircle01Icon : RefreshDotIcon}
-                    size={18}
-                    strokeWidth={1.5}
-                  />
-                </Button>
-              </div>
-            }
-          />
-          <TooltipContent>
-            {isSaved
-              ? "Draft saved in this browser"
-              : "Saving draft..."}
-          </TooltipContent>
-        </Tooltip>
-
         <Tooltip>
           <TooltipTrigger
             render={
@@ -245,13 +234,24 @@ export function Toolbar() {
                 size="icon-sm"
                 onClick={handleSave}
                 aria-label={fileHandle ? "Save to current file" : "Save as"}
+                className={
+                  fileDirty
+                    ? "text-amber-500 dark:text-amber-400"
+                    : fileHandle
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : ""
+                }
               />
             }
           >
             <HugeiconsIcon icon={FloppyDiskIcon} size={18} strokeWidth={1.5} />
           </TooltipTrigger>
           <TooltipContent>
-            {fileHandle ? "Save to file" : "Save as..."}
+            {fileHandle
+              ? fileDirty
+                ? "Unsaved file changes"
+                : "Saved to file"
+              : "Save as..."}
           </TooltipContent>
         </Tooltip>
 

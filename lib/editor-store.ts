@@ -11,6 +11,7 @@ interface EditorState {
   editor: Editor | null;
   content: string;
   isSaved: boolean;
+  fileDirty: boolean;
   fileHandle: FileSystemFileHandle | null;
   focusMode: boolean;
   font: EditorFont;
@@ -19,6 +20,7 @@ interface EditorState {
   setContent: (content: string) => void;
   loadContent: (content: string) => void;
   markSaved: () => void;
+  markFileSaved: () => void;
   notifyManualSave: () => void;
   setEditor: (editor: Editor | null) => void;
   setFileHandle: (handle: FileSystemFileHandle | null) => void;
@@ -31,6 +33,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   editor: null,
   content: "",
   isSaved: true,
+  fileDirty: false,
   fileHandle: null,
   focusMode: false,
   font: "sans" as EditorFont,
@@ -38,15 +41,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   lastManualSaveAt: 0,
 
   setContent: (content: string) => {
-    set({ content, isSaved: false });
+    set({ content, isSaved: false, fileDirty: true });
   },
 
   loadContent: (content: string) => {
-    set({ content, isSaved: true });
+    set({ content, isSaved: true, fileDirty: false });
   },
 
   markSaved: () => {
     set({ isSaved: true });
+  },
+
+  markFileSaved: () => {
+    set({ fileDirty: false });
   },
 
   notifyManualSave: () => {
@@ -80,7 +87,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        set({ content: saved, isSaved: true });
+        set({ content: saved, isSaved: true, fileDirty: false });
       }
       const fm = localStorage.getItem(FOCUS_MODE_KEY);
       if (fm) {

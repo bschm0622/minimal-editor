@@ -189,6 +189,11 @@
   font-weight: 600;
 }
 
+.tiptap.prose > :is(h1, h2, h3):first-child,
+.tiptap.prose > :is(h1, h2, h3).is-empty:first-child {
+  margin-top: 0 !important;
+}
+
 .tiptap.prose code {
   background: var(--muted);
   padding: 0.15em 0.35em;
