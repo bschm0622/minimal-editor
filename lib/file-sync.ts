@@ -1,8 +1,16 @@
 import { useEditorStore } from "./editor-store";
 
+type ShowOpenFilePicker = (
+  options?: OpenFilePickerOptions
+) => Promise<FileSystemFileHandle[]>;
+
+type ShowSaveFilePicker = (
+  options?: SaveFilePickerOptions
+) => Promise<FileSystemFileHandle>;
+
 interface FilePickerWindow extends Window {
-  showOpenFilePicker?: typeof window.showOpenFilePicker;
-  showSaveFilePicker?: typeof window.showSaveFilePicker;
+  showOpenFilePicker?: ShowOpenFilePicker;
+  showSaveFilePicker?: ShowSaveFilePicker;
 }
 
 const pickerWindow = globalThis as FilePickerWindow;
