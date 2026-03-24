@@ -4,15 +4,16 @@ import { useCallback, useEffect, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Copy01Icon,
-  Download01Icon,
-  Sun01Icon,
-  Moon01Icon,
+  FloppyDiskIcon,
+  FolderOpenIcon,
   CenterFocusIcon,
-  Menu01Icon,
+  Moon02Icon,
+  QuillWrite02Icon,
+  Sun01Icon,
   TextFontIcon,
 } from "@hugeicons/core-free-icons";
 import { useEditorStore, type EditorFont } from "@/lib/editor-store";
-import { saveFileAs } from "@/lib/file-sync";
+import { openFile, saveFile, saveFileAs } from "@/lib/file-sync";
 import { htmlToMarkdown } from "@/lib/markdown";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -34,17 +35,22 @@ const FONT_OPTIONS: { value: EditorFont; label: string; sample: string }[] = [
 ];
 
 export function Toolbar() {
-  const { isSaved, fileHandle, focusMode, font, toggleFocusMode, setFont } =
+  const { fileHandle, focusMode, font, toggleFocusMode, setFont, loadContent } =
     useEditorStore();
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    if (typeof window === "undefined") return false;
+
+    const stored = localStorage.getItem("minimal-editor-theme");
+    if (stored) return stored === "dark";
+
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
   const [expanded, setExpanded] = useState(false);
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const stored = localStorage.getItem("minimal-editor-theme");
-    const dark = stored ? stored === "dark" : mq.matches;
-    setIsDark(dark);
-    document.documentElement.classList.toggle("dark", dark);
+    document.documentElement.classList.toggle("dark", isDark);
 
     const handler = (e: MediaQueryListEvent) => {
       if (!localStorage.getItem("minimal-editor-theme")) {
@@ -54,7 +60,17 @@ export function Toolbar() {
     };
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, []);
+  }, [isDark]);
+
+  useEffect(() => {
+    if (!showSaveConfirmation) return;
+
+    const timeout = window.setTimeout(() => {
+      setShowSaveConfirmation(false);
+    }, 1200);
+
+    return () => window.clearTimeout(timeout);
+  }, [showSaveConfirmation]);
 
   const toggleTheme = useCallback(() => {
     const next = !isDark;
@@ -63,11 +79,18 @@ export function Toolbar() {
     localStorage.setItem("minimal-editor-theme", next ? "dark" : "light");
   }, [isDark]);
 
-  const handleSyncToFile = useCallback(async () => {
+  const handleSave = useCallback(async () => {
     const content = useEditorStore.getState().content;
     const markdown = htmlToMarkdown(content);
-    await saveFileAs(markdown);
-  }, []);
+    const didSave = fileHandle
+      ? await saveFile(markdown)
+      : await saveFileAs(markdown);
+
+    if (didSave) {
+      setShowSaveConfirmation(true);
+      setExpanded(false);
+    }
+  }, [fileHandle]);
 
   const handleCopyMarkdown = useCallback(async () => {
     const content = useEditorStore.getState().content;
@@ -75,46 +98,72 @@ export function Toolbar() {
     await navigator.clipboard.writeText(markdown);
   }, []);
 
+  const handleOpenFile = useCallback(async () => {
+    const nextContent = await openFile();
+    if (nextContent === null) return;
+
+    loadContent(nextContent);
+    setExpanded(false);
+  }, [loadContent]);
+
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 h-14"
+      className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between px-4 py-3"
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
     >
-      {/* Left side: icon hint + file info */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={() => setExpanded((open) => !open)}
+          aria-label="Toggle toolbar"
+          aria-expanded={expanded}
+          className="flex items-center justify-center text-muted-foreground sm:hidden"
+        >
+          <HugeiconsIcon
+            icon={QuillWrite02Icon}
+            size={18}
+            strokeWidth={1.5}
+          />
+        </button>
+
         <div
-          className={`flex items-center justify-center transition-all duration-200 ${
+          className={`hidden items-center justify-center transition-all duration-200 sm:flex ${
             expanded ? "text-muted-foreground" : "text-muted-foreground/30"
           }`}
         >
-          <HugeiconsIcon icon={Menu01Icon} size={18} strokeWidth={1.5} />
-        </div>
-
-        <div
-          className={`flex items-center gap-2 transition-opacity duration-200 ${
-            expanded ? "opacity-100" : "opacity-0 pointer-events-none"
-          }`}
-        >
-          <span className="text-sm text-muted-foreground">
-            {fileHandle ? fileHandle.name : "Untitled"}
-          </span>
-          <span
-            className={`inline-block size-2 rounded-full transition-colors ${
-              isSaved ? "bg-emerald-500" : "bg-amber-500"
-            }`}
+          <HugeiconsIcon
+            icon={QuillWrite02Icon}
+            size={18}
+            strokeWidth={1.5}
           />
         </div>
       </div>
 
       {/* Action buttons */}
       <div
-        className={`flex items-center gap-1 rounded-xl border border-border bg-background/80 p-1.5 backdrop-blur-sm transition-all duration-200 ${
+        className={`absolute right-4 top-1/2 flex items-center gap-1 rounded-xl border border-border bg-background/95 p-1.5 shadow-lg backdrop-blur-sm transition-all duration-200 sm:static sm:bg-background/80 sm:shadow-none ${
           expanded
-            ? "opacity-100 translate-y-0"
-            : "opacity-0 -translate-y-1 pointer-events-none"
+            ? "translate-y-[-50%] opacity-100 sm:translate-y-0"
+            : "pointer-events-none translate-y-[-60%] opacity-0 sm:-translate-y-1"
         }`}
       >
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={handleOpenFile}
+                aria-label="Open file"
+              />
+            }
+          >
+            <HugeiconsIcon icon={FolderOpenIcon} size={18} strokeWidth={1.5} />
+          </TooltipTrigger>
+          <TooltipContent>Open file</TooltipContent>
+        </Tooltip>
+
         <Tooltip>
           <TooltipTrigger
             render={
@@ -137,14 +186,16 @@ export function Toolbar() {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={handleSyncToFile}
-                aria-label="Save as .md file"
+                onClick={handleSave}
+                aria-label={fileHandle ? "Save to file" : "Save file"}
               />
             }
           >
-            <HugeiconsIcon icon={Download01Icon} size={18} strokeWidth={1.5} />
+            <HugeiconsIcon icon={FloppyDiskIcon} size={18} strokeWidth={1.5} />
           </TooltipTrigger>
-          <TooltipContent>Save as .md</TooltipContent>
+          <TooltipContent>
+            {fileHandle ? "Save to file" : "Save file"}
+          </TooltipContent>
         </Tooltip>
 
         <Separator orientation="vertical" className="mx-1 h-5" />
@@ -234,13 +285,23 @@ export function Toolbar() {
             }
           >
             <HugeiconsIcon
-              icon={isDark ? Sun01Icon : Moon01Icon}
+              icon={isDark ? Sun01Icon : Moon02Icon}
               size={18}
               strokeWidth={1.5}
             />
           </TooltipTrigger>
           <TooltipContent>{isDark ? "Light mode" : "Dark mode"}</TooltipContent>
         </Tooltip>
+      </div>
+
+      <div
+        className={`pointer-events-none absolute right-4 top-full mt-2 rounded-full border border-border bg-background/95 px-3 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur-sm transition-all duration-200 ${
+          showSaveConfirmation
+            ? "translate-y-0 opacity-100"
+            : "-translate-y-1 opacity-0"
+        }`}
+      >
+        Saved to file
       </div>
     </header>
   );

@@ -1,11 +1,18 @@
 import { useEditorStore } from "./editor-store";
 
-// File System Access API is not in all TS libs
-const w = globalThis as any;
+interface FilePickerWindow extends Window {
+  showOpenFilePicker?: typeof window.showOpenFilePicker;
+  showSaveFilePicker?: typeof window.showSaveFilePicker;
+}
+
+const pickerWindow = globalThis as FilePickerWindow;
 
 export async function openFile(): Promise<string | null> {
   try {
-    const [handle] = await w.showOpenFilePicker({
+    const picker = pickerWindow.showOpenFilePicker;
+    if (!picker) return null;
+
+    const [handle] = await picker({
       types: [
         {
           description: "Markdown files",
@@ -38,7 +45,10 @@ export async function saveFile(content: string): Promise<boolean> {
 
 export async function saveFileAs(content: string): Promise<boolean> {
   try {
-    const handle = await w.showSaveFilePicker({
+    const picker = pickerWindow.showSaveFilePicker;
+    if (!picker) return false;
+
+    const handle = await picker({
       suggestedName: "untitled.md",
       types: [
         {

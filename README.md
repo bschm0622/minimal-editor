@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Minimal Editor
 
-## Getting Started
+A deliberately simple writing app built with Next.js, Tiptap, and Tailwind.
 
-First, run the development server:
+It is designed around one current draft:
+- your draft autosaves locally in the browser
+- you can open an existing Markdown file
+- you can save the current draft back to a file when you want
+
+## Features
+
+- Clean rich-text writing surface with Markdown-friendly shortcuts
+- Slash menu for common block types
+- Heading shortcuts like `# `, `## `, and `### `
+- Copy current content as Markdown
+- Open and save `.md` files with the File System Access API
+- Local draft autosave
+- Focus mode
+- Font switching: sans, serif, mono
+- Light and dark mode
+
+## Writing Shortcuts
+
+- `/` opens the slash menu for blocks
+- `# ` creates a heading
+- `Cmd/Ctrl + O` opens a Markdown file
+- `Cmd/Ctrl + S` saves to file
+- `Cmd/Ctrl + Shift + C` copies Markdown
+
+## Save Behavior
+
+The app has two save layers:
+
+1. Local autosave
+   The current draft is automatically saved in browser storage.
+
+2. File save
+   When you use the save action, the draft is written to a `.md` file.
+   After a file has been chosen once, future saves write back to that same file.
+
+## Fonts
+
+The current defaults are:
+
+- Sans: `Figtree`
+- Serif: `Lora`
+- Mono: `Geist Mono`
+
+## Development
+
+Run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Useful scripts:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev
+npm run lint
+npm run build
+```
 
-## Learn More
+## Tech
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Next.js 16
+- React 19
+- Tiptap 3
+- Zustand
+- Tailwind CSS 4

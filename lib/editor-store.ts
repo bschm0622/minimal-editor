@@ -12,7 +12,9 @@ interface EditorState {
   fileHandle: FileSystemFileHandle | null;
   focusMode: boolean;
   font: EditorFont;
+  hydrated: boolean;
   setContent: (content: string) => void;
+  loadContent: (content: string) => void;
   markSaved: () => void;
   setFileHandle: (handle: FileSystemFileHandle | null) => void;
   toggleFocusMode: () => void;
@@ -26,9 +28,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   fileHandle: null,
   focusMode: false,
   font: "sans" as EditorFont,
+  hydrated: false,
 
   setContent: (content: string) => {
     set({ content, isSaved: false });
+  },
+
+  loadContent: (content: string) => {
+    set({ content, isSaved: true });
   },
 
   markSaved: () => {
@@ -68,7 +75,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (font && ["sans", "serif", "mono"].includes(font)) {
         set({ font });
       }
-    } catch {}
+    } catch {
+      // Ignore storage errors and continue with defaults.
+    } finally {
+      set({ hydrated: true });
+    }
   },
 }));
 
