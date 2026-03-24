@@ -22,12 +22,12 @@ type ShowSaveFilePicker = (
   options?: SaveFilePickerOptionsLike
 ) => Promise<FileSystemFileHandle>;
 
-interface FilePickerWindow extends Window {
+interface FilePickerWindow {
   showOpenFilePicker?: ShowOpenFilePicker;
   showSaveFilePicker?: ShowSaveFilePicker;
 }
 
-const pickerWindow = globalThis as FilePickerWindow;
+const pickerWindow = globalThis as unknown as FilePickerWindow;
 
 export async function openFile(): Promise<string | null> {
   try {
