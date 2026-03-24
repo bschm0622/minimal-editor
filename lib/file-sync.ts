@@ -7,6 +7,7 @@ interface FilePickerAcceptType {
 
 interface OpenFilePickerOptionsLike {
   types?: FilePickerAcceptType[];
+  excludeAcceptAllOption?: boolean;
 }
 
 interface SaveFilePickerOptionsLike {
@@ -29,18 +30,24 @@ interface FilePickerWindow {
 
 const pickerWindow = globalThis as unknown as FilePickerWindow;
 
+const markdownPickerTypes: FilePickerAcceptType[] = [
+  {
+    description: "Markdown files",
+    accept: {
+      "text/markdown": [".md", ".markdown"],
+      "text/plain": [".md", ".markdown", ".txt"],
+    },
+  },
+];
+
 export async function openFile(): Promise<string | null> {
   try {
     const picker = pickerWindow.showOpenFilePicker;
     if (!picker) return null;
 
     const [handle] = await picker({
-      types: [
-        {
-          description: "Markdown files",
-          accept: { "text/markdown": [".md"] },
-        },
-      ],
+      types: markdownPickerTypes,
+      excludeAcceptAllOption: false,
     });
     useEditorStore.getState().setFileHandle(handle);
     const file = await handle.getFile();
@@ -72,12 +79,7 @@ export async function saveFileAs(content: string): Promise<boolean> {
 
     const handle = await picker({
       suggestedName: "untitled.md",
-      types: [
-        {
-          description: "Markdown files",
-          accept: { "text/markdown": [".md"] },
-        },
-      ],
+      types: markdownPickerTypes,
     });
     useEditorStore.getState().setFileHandle(handle);
     const writable = await handle.createWritable();
