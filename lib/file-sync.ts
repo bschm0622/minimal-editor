@@ -1,11 +1,25 @@
 import { useEditorStore } from "./editor-store";
 
+interface FilePickerAcceptType {
+  description?: string;
+  accept: Record<string, string[]>;
+}
+
+interface OpenFilePickerOptionsLike {
+  types?: FilePickerAcceptType[];
+}
+
+interface SaveFilePickerOptionsLike {
+  suggestedName?: string;
+  types?: FilePickerAcceptType[];
+}
+
 type ShowOpenFilePicker = (
-  options?: OpenFilePickerOptions
+  options?: OpenFilePickerOptionsLike
 ) => Promise<FileSystemFileHandle[]>;
 
 type ShowSaveFilePicker = (
-  options?: SaveFilePickerOptions
+  options?: SaveFilePickerOptionsLike
 ) => Promise<FileSystemFileHandle>;
 
 interface FilePickerWindow extends Window {
