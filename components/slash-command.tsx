@@ -2,6 +2,7 @@
 
 import { Extension, type Editor, type Range } from "@tiptap/core";
 import {
+  FileCodeIcon,
   Heading01Icon,
   Heading02Icon,
   Heading03Icon,
@@ -9,7 +10,6 @@ import {
   LeftToRightListBulletIcon,
   LeftToRightListNumberIcon,
   MinusSignIcon,
-  SourceCodeSquareIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { ReactRenderer } from "@tiptap/react";
@@ -123,7 +123,7 @@ const COMMAND_ITEMS: CommandItem[] = [
     title: "Code",
     description: "Capture code in a monospaced block",
     aliases: ["code", "codeblock", "snippet", "```"],
-    icon: SourceCodeSquareIcon,
+    icon: FileCodeIcon,
     command: ({ editor, range }) => {
       applyCommand({
         editor,

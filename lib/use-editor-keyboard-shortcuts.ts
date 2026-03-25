@@ -9,10 +9,25 @@ import {
   saveEditorContentToFile,
 } from "./editor-file-actions";
 
-export function useEditorKeyboardShortcuts(editor: Editor | null) {
+type EditorKeyboardShortcutOptions = {
+  onOpenLinkEditor?: () => void;
+};
+
+export function useEditorKeyboardShortcuts(
+  editor: Editor | null,
+  options: EditorKeyboardShortcutOptions = {}
+) {
+  const { onOpenLinkEditor } = options;
+
   useEffect(() => {
     const handleKeyDown = async (event: KeyboardEvent) => {
       if (!editor) return;
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        onOpenLinkEditor?.();
+        return;
+      }
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "o") {
         event.preventDefault();
@@ -48,5 +63,5 @@ export function useEditorKeyboardShortcuts(editor: Editor | null) {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [editor]);
+  }, [editor, onOpenLinkEditor]);
 }

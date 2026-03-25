@@ -449,11 +449,12 @@ export function Toolbar() {
       </div>
 
       <div
-        className={`pointer-events-none absolute right-4 top-full mt-2 rounded-full border border-border bg-background/95 px-3 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur-sm transition-all duration-200 ${
+        className={`pointer-events-none fixed right-3 z-60 rounded-full border border-border bg-background/95 px-3 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur-sm transition-all duration-200 sm:right-4 ${
           showSaveConfirmation
             ? "translate-y-0 opacity-100"
-            : "-translate-y-1 opacity-0"
+            : "-translate-y-2 opacity-0"
         }`}
+        style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
       >
         Saved to file
       </div>

@@ -54,6 +54,8 @@
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
+  --link: oklch(0.56 0.19 255);
+  --link-hover: oklch(0.5 0.2 255);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
@@ -89,6 +91,8 @@
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
+  --link: oklch(0.74 0.12 250);
+  --link-hover: oklch(0.8 0.1 245);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
@@ -140,6 +144,13 @@
 .tiptap-editor {
   padding-bottom: clamp(8rem, 35vh, 18rem);
   scroll-padding-bottom: clamp(8rem, 35vh, 18rem);
+}
+
+@media (max-width: 640px) {
+  .tiptap-editor {
+    padding-bottom: clamp(7rem, 28vh, 12rem);
+    scroll-padding-bottom: clamp(7rem, 28vh, 12rem);
+  }
 }
 
 .tiptap p.is-editor-empty:first-child::before {
@@ -241,14 +252,28 @@
   margin: 2em 0;
 }
 
-.tiptap.prose a {
-  color: var(--foreground);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--muted-foreground);
-  transition: text-decoration-color 0.15s;
+.tiptap a[href],
+.tiptap.prose a[href] {
+  color: var(--link) !important;
+  text-decoration-line: underline !important;
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.16em;
+  transition:
+    color 0.15s ease,
+    text-decoration-color 0.15s ease;
 }
 
-.tiptap.prose a:hover {
-  text-decoration-color: var(--foreground);
+.tiptap a[href]:hover,
+.tiptap.prose a[href]:hover {
+  color: var(--link-hover) !important;
+}
+
+.tiptap a.editor-link[href],
+.tiptap.prose a.editor-link[href] {
+  border-radius: 0;
+  background: transparent;
+  box-decoration-break: slice;
+  -webkit-box-decoration-break: slice;
+  padding: 0;
 }

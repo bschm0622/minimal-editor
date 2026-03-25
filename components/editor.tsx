@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState, type MouseEvent } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { DOMParser as ProseMirrorDOMParser } from "@tiptap/pm/model";
+import type { Selection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
+import Link from "@tiptap/extension-link";
 import { Placeholder } from "@tiptap/extensions/placeholder";
 import { Focus } from "@tiptap/extensions/focus";
 import { useEditorStore, debouncedSave } from "@/lib/editor-store";
@@ -21,11 +23,24 @@ export function Editor() {
   const { content, focusMode, font, hydrate, hydrated, setEditor } =
     useEditorStore();
   const initialContentAppliedRef = useRef(false);
+  const [linkMenuOpen, setLinkMenuOpen] = useState(false);
+  const [linkSelection, setLinkSelection] = useState<Pick<Selection, "from" | "to"> | null>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit,
+      Link.configure({
+        openOnClick: false,
+        enableClickSelection: true,
+        autolink: true,
+        linkOnPaste: true,
+        HTMLAttributes: {
+          class: "editor-link",
+          target: null,
+          rel: null,
+        },
+      }),
       Placeholder.configure({
         placeholder: ({ editor }) =>
           editor.isEmpty
@@ -43,7 +58,7 @@ export function Editor() {
     editorProps: {
       attributes: {
         class:
-          "tiptap-editor prose prose-neutral dark:prose-invert max-w-none outline-none min-h-[calc(100vh-8rem)] px-4 pt-8 sm:px-0",
+          "tiptap-editor prose prose-neutral dark:prose-invert max-w-none outline-none min-h-[calc(100vh-8rem)] px-5 pt-8 sm:px-6",
       },
       handlePaste(view, event) {
         const plainText = event.clipboardData?.getData("text/plain") ?? "";
@@ -62,6 +77,23 @@ export function Editor() {
         view.dispatch(view.state.tr.replaceSelection(slice));
         return true;
       },
+      handleClick(view, _, event) {
+        const target = event.target;
+
+        if (!(target instanceof HTMLElement)) {
+          return false;
+        }
+
+        const anchor = target.closest("a[href]");
+
+        if (!anchor) {
+          return false;
+        }
+
+        event.preventDefault();
+        view.focus();
+        return false;
+      },
     },
     onUpdate: ({ editor }) => {
       const html = editor.getHTML();
@@ -70,7 +102,18 @@ export function Editor() {
     },
   });
 
-  useEditorKeyboardShortcuts(editor);
+  const openLinkMenu = useCallback(() => {
+    if (editor) {
+      const { from, to } = editor.state.selection;
+      setLinkSelection({ from, to });
+    }
+
+    setLinkMenuOpen(true);
+  }, [editor]);
+
+  useEditorKeyboardShortcuts(editor, {
+    onOpenLinkEditor: openLinkMenu,
+  });
 
   useEffect(() => {
     setEditor(editor);
@@ -101,11 +144,21 @@ export function Editor() {
     editor.commands.setContent(content, { emitUpdate: false });
   }, [editor, content, hydrated]);
 
-  const handleContainerClick = useCallback(() => {
+  const handleContainerClick = useCallback((event: MouseEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) return;
+
     if (editor && !editor.isFocused) {
       editor.commands.focus("end");
     }
   }, [editor]);
+
+  const handleLinkMenuOpenChange = useCallback((open: boolean) => {
+    setLinkMenuOpen(open);
+
+    if (!open) {
+      setLinkSelection(null);
+    }
+  }, []);
 
   if (!editor) return null;
 
@@ -120,7 +173,12 @@ export function Editor() {
       )}
       onClick={handleContainerClick}
     >
-      <EditorBubbleMenu editor={editor} />
+      <EditorBubbleMenu
+        editor={editor}
+        linkOpen={linkMenuOpen}
+        onLinkOpenChange={handleLinkMenuOpenChange}
+        savedSelection={linkSelection}
+      />
       <EditorContent editor={editor} />
     </div>
   );
