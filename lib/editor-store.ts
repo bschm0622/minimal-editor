@@ -4,12 +4,16 @@ import type { Editor } from "@tiptap/core";
 const STORAGE_KEY = "minimal-editor-content";
 const FOCUS_MODE_KEY = "minimal-editor-focus-mode";
 const FONT_KEY = "minimal-editor-font";
+const COMPARE_CONTENT_KEY = "minimal-editor-compare-content";
+const COMPARE_MODE_KEY = "minimal-editor-compare-mode";
 
-export type EditorFont = "sans" | "serif" | "mono";
+export type EditorFont = "sans" | "classic" | "mono" | "editorial";
 
 interface EditorState {
   editor: Editor | null;
   content: string;
+  compareContent: string;
+  compareMode: boolean;
   isSaved: boolean;
   fileDirty: boolean;
   fileHandle: FileSystemFileHandle | null;
@@ -19,6 +23,9 @@ interface EditorState {
   lastManualSaveAt: number;
   setContent: (content: string) => void;
   loadContent: (content: string) => void;
+  setCompareContent: (content: string) => void;
+  clearCompareContent: () => void;
+  setCompareMode: (open: boolean) => void;
   markSaved: () => void;
   markFileSaved: () => void;
   notifyManualSave: () => void;
@@ -32,6 +39,8 @@ interface EditorState {
 export const useEditorStore = create<EditorState>((set, get) => ({
   editor: null,
   content: "",
+  compareContent: "",
+  compareMode: false,
   isSaved: true,
   fileDirty: false,
   fileHandle: null,
@@ -46,6 +55,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   loadContent: (content: string) => {
     set({ content, isSaved: true, fileDirty: false });
+  },
+
+  setCompareContent: (compareContent: string) => {
+    set({ compareContent });
+    try {
+      localStorage.setItem(COMPARE_CONTENT_KEY, compareContent);
+    } catch {}
+  },
+
+  clearCompareContent: () => {
+    set({ compareContent: "" });
+    try {
+      localStorage.removeItem(COMPARE_CONTENT_KEY);
+    } catch {}
+  },
+
+  setCompareMode: (compareMode: boolean) => {
+    set({ compareMode });
+    try {
+      localStorage.setItem(COMPARE_MODE_KEY, JSON.stringify(compareMode));
+    } catch {}
   },
 
   markSaved: () => {
@@ -94,8 +124,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         set({ focusMode: JSON.parse(fm) });
       }
       const font = localStorage.getItem(FONT_KEY) as EditorFont | null;
-      if (font && ["sans", "serif", "mono"].includes(font)) {
+      if (font && ["sans", "serif", "mono", "editorial"].includes(font)) {
         set({ font });
+      }
+      const compareContent = localStorage.getItem(COMPARE_CONTENT_KEY);
+      if (compareContent) {
+        set({ compareContent });
+      }
+      const compareMode = localStorage.getItem(COMPARE_MODE_KEY);
+      if (compareMode) {
+        set({ compareMode: JSON.parse(compareMode) });
       }
     } catch {
       // Ignore storage errors and continue with defaults.

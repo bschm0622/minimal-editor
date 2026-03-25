@@ -11,13 +11,14 @@ import {
 
 type EditorKeyboardShortcutOptions = {
   onOpenLinkEditor?: () => void;
+  enableFileCommands?: boolean;
 };
 
 export function useEditorKeyboardShortcuts(
   editor: Editor | null,
   options: EditorKeyboardShortcutOptions = {}
 ) {
-  const { onOpenLinkEditor } = options;
+  const { onOpenLinkEditor, enableFileCommands = true } = options;
 
   useEffect(() => {
     const handleKeyDown = async (event: KeyboardEvent) => {
@@ -26,6 +27,10 @@ export function useEditorKeyboardShortcuts(
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         onOpenLinkEditor?.();
+        return;
+      }
+
+      if (!enableFileCommands) {
         return;
       }
 
@@ -63,5 +68,5 @@ export function useEditorKeyboardShortcuts(
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [editor, onOpenLinkEditor]);
+  }, [editor, enableFileCommands, onOpenLinkEditor]);
 }

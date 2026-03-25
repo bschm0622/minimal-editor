@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Figtree, Lora } from "next/font/google";
+import { Geist, Geist_Mono, Figtree, Source_Serif_4, Bitter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -15,8 +15,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const lora = Lora({
+const sourceSerif = Source_Serif_4({
   variable: "--font-serif",
+  subsets: ["latin"],
+});
+
+const bitter = Bitter({
+  variable: "--font-classic",
   subsets: ["latin"],
 });
 
@@ -46,7 +51,16 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", figtree.variable, lora.variable)}
+      className={cn(
+        "h-full",
+        "antialiased",
+        geistSans.variable,
+        geistMono.variable,
+        "font-sans",
+        figtree.variable,
+        sourceSerif.variable,
+        bitter.variable
+      )}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

@@ -136,6 +136,14 @@
   }
 }
 
+.font-editorial {
+  font-family: var(--font-serif), ui-serif, serif;
+}
+
+.font-classic {
+  font-family: var(--font-classic), ui-serif, serif;
+}
+
 /* Tiptap Editor Styles */
 .tiptap {
   caret-color: var(--foreground);
@@ -276,4 +284,10 @@
   box-decoration-break: slice;
   -webkit-box-decoration-break: slice;
   padding: 0;
+}
+
+.compare-target {
+  border-radius: 0.5rem;
+  background: color-mix(in oklab, var(--accent) 55%, transparent);
+  transition: background-color 0.25s ease;
 }

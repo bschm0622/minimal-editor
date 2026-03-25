@@ -6,6 +6,7 @@ import {
   Copy01Icon,
   FloppyDiskIcon,
   FolderOpenIcon,
+  GitCompareIcon,
   CenterFocusIcon,
   HelpCircleIcon,
   Moon02Icon,
@@ -38,9 +39,10 @@ import {
 } from "@/components/ui/popover";
 
 const FONT_OPTIONS: { value: EditorFont; label: string; sample: string }[] = [
-  { value: "sans", label: "Sans Serif", sample: "Aa" },
-  { value: "serif", label: "Serif", sample: "Aa" },
-  { value: "mono", label: "Monospace", sample: "Aa" },
+  { value: "sans", label: "Clean", sample: "Aa" },
+  { value: "classic", label: "Warm", sample: "Aa" },
+  { value: "editorial", label: "Editorial", sample: "Ag" },
+  { value: "mono", label: "Code", sample: "Aa" },
 ];
 
 const HELP_SHORTCUTS = [
@@ -62,8 +64,16 @@ const HELP_FEATURES = [
 ];
 
 export function Toolbar() {
-  const { fileHandle, focusMode, font, fileDirty, toggleFocusMode, setFont } =
-    useEditorStore();
+  const {
+    fileHandle,
+    focusMode,
+    font,
+    fileDirty,
+    compareMode,
+    toggleFocusMode,
+    setFont,
+    setCompareMode,
+  } = useEditorStore();
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
 
@@ -146,7 +156,7 @@ export function Toolbar() {
   }, []);
 
   const fileStatusClassName = !fileHandle
-    ? "bg-border"
+    ? "hidden"
     : fileDirty
       ? "bg-amber-500"
       : "bg-emerald-500";
@@ -156,6 +166,17 @@ export function Toolbar() {
     : fileDirty
       ? "File has unsaved changes"
       : "File is up to date";
+  const tooltipFontClassName =
+    font === "editorial"
+      ? "font-editorial"
+      : font === "classic"
+        ? "font-classic"
+        : font === "mono"
+          ? "font-mono"
+          : "font-sans";
+
+  const showFileActions = !compareMode;
+  const showFocusModeToggle = !compareMode;
 
   return (
     <header
@@ -197,7 +218,9 @@ export function Toolbar() {
                 />
               }
             />
-            <TooltipContent>{fileStatusLabel}</TooltipContent>
+            <TooltipContent className={tooltipFontClassName}>
+              {fileStatusLabel}
+            </TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -216,62 +239,93 @@ export function Toolbar() {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={handleOpenFile}
-                aria-label="Open file"
+                onClick={() => setCompareMode(!compareMode)}
+                aria-label="Toggle compare mode"
+                className={compareMode ? "bg-accent" : ""}
               />
             }
           >
-            <HugeiconsIcon icon={FolderOpenIcon} size={18} strokeWidth={1.5} />
+            <HugeiconsIcon
+              icon={GitCompareIcon}
+              size={18}
+              strokeWidth={1.5}
+            />
           </TooltipTrigger>
-          <TooltipContent>Open file</TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={handleSave}
-                aria-label={fileHandle ? "Save to current file" : "Save as"}
-                className={
-                  fileDirty
-                    ? "text-amber-500 dark:text-amber-400"
-                    : fileHandle
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : ""
-                }
-              />
-            }
-          >
-            <HugeiconsIcon icon={FloppyDiskIcon} size={18} strokeWidth={1.5} />
-          </TooltipTrigger>
-          <TooltipContent>
-            {fileHandle
-              ? fileDirty
-                ? "Unsaved file changes"
-                : "Saved to file"
-              : "Save as..."}
+          <TooltipContent className={tooltipFontClassName}>
+            Compare versions
           </TooltipContent>
         </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={handleCopyMarkdown}
-                aria-label="Copy as Markdown"
-              />
-            }
-          >
-            <HugeiconsIcon icon={Copy01Icon} size={18} strokeWidth={1.5} />
-          </TooltipTrigger>
-          <TooltipContent>Copy as Markdown</TooltipContent>
-        </Tooltip>
+        {showFileActions ? (
+          <>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={handleOpenFile}
+                    aria-label="Open file"
+                  />
+                }
+              >
+                <HugeiconsIcon icon={FolderOpenIcon} size={18} strokeWidth={1.5} />
+              </TooltipTrigger>
+              <TooltipContent className={tooltipFontClassName}>
+                Open file
+              </TooltipContent>
+            </Tooltip>
 
-        <Separator orientation="vertical" className="mx-1 h-5" />
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={handleSave}
+                    aria-label={fileHandle ? "Save to current file" : "Save as"}
+                    className={
+                      fileDirty
+                        ? "text-amber-500 dark:text-amber-400"
+                        : fileHandle
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : ""
+                    }
+                  />
+                }
+              >
+                <HugeiconsIcon icon={FloppyDiskIcon} size={18} strokeWidth={1.5} />
+              </TooltipTrigger>
+              <TooltipContent className={tooltipFontClassName}>
+                {fileHandle
+                  ? fileDirty
+                    ? "Unsaved file changes"
+                    : "Saved to file"
+                  : "Save as..."}
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={handleCopyMarkdown}
+                    aria-label="Copy as Markdown"
+                  />
+                }
+              >
+                <HugeiconsIcon icon={Copy01Icon} size={18} strokeWidth={1.5} />
+              </TooltipTrigger>
+              <TooltipContent className={tooltipFontClassName}>
+                Copy as Markdown
+              </TooltipContent>
+            </Tooltip>
+
+            <Separator orientation="vertical" className="mx-1 h-5" />
+          </>
+        ) : null}
 
         {/* Font picker */}
         <Popover>
@@ -295,14 +349,16 @@ export function Toolbar() {
                 </PopoverTrigger>
               }
             />
-            <TooltipContent>Font</TooltipContent>
+            <TooltipContent className={tooltipFontClassName}>
+              Font
+            </TooltipContent>
           </Tooltip>
-          <PopoverContent className="w-44 p-1.5" side="bottom" align="end">
+          <PopoverContent className="w-44 gap-0 p-1.5" side="bottom" align="end">
             {FONT_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => setFont(opt.value)}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
                   font === opt.value
                     ? "bg-accent text-accent-foreground"
                     : "text-foreground hover:bg-accent/50"
@@ -310,8 +366,10 @@ export function Toolbar() {
               >
                 <span
                   className={`text-base ${
-                    opt.value === "serif"
-                      ? "font-serif"
+                    opt.value === "classic"
+                      ? "font-classic"
+                      : opt.value === "editorial"
+                        ? "font-editorial"
                       : opt.value === "mono"
                         ? "font-mono"
                         : "font-sans"
@@ -325,26 +383,30 @@ export function Toolbar() {
           </PopoverContent>
         </Popover>
 
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={toggleFocusMode}
-                aria-label="Toggle focus mode"
-                className={focusMode ? "bg-accent" : ""}
+        {showFocusModeToggle ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={toggleFocusMode}
+                  aria-label="Toggle focus mode"
+                  className={focusMode ? "bg-accent" : ""}
+                />
+              }
+            >
+              <HugeiconsIcon
+                icon={CenterFocusIcon}
+                size={18}
+                strokeWidth={1.5}
               />
-            }
-          >
-            <HugeiconsIcon
-              icon={CenterFocusIcon}
-              size={18}
-              strokeWidth={1.5}
-            />
-          </TooltipTrigger>
-          <TooltipContent>Focus mode</TooltipContent>
-        </Tooltip>
+            </TooltipTrigger>
+            <TooltipContent className={tooltipFontClassName}>
+              Focus mode
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
 
         <Tooltip>
           <TooltipTrigger
@@ -363,7 +425,9 @@ export function Toolbar() {
               strokeWidth={1.5}
             />
           </TooltipTrigger>
-          <TooltipContent>{isDark ? "Light mode" : "Dark mode"}</TooltipContent>
+          <TooltipContent className={tooltipFontClassName}>
+            {isDark ? "Light mode" : "Dark mode"}
+          </TooltipContent>
         </Tooltip>
 
         <Popover>
@@ -383,7 +447,9 @@ export function Toolbar() {
                 </PopoverTrigger>
               }
             />
-            <TooltipContent>Help</TooltipContent>
+            <TooltipContent className={tooltipFontClassName}>
+              Help
+            </TooltipContent>
           </Tooltip>
           <PopoverContent
             className="w-[min(24rem,calc(100vw-1rem))] gap-3 p-3"
