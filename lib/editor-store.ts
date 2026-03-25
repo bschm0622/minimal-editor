@@ -7,6 +7,7 @@ const FONT_KEY = "minimal-editor-font";
 const COMPARE_CONTENT_KEY = "minimal-editor-compare-content";
 const COMPARE_MODE_KEY = "minimal-editor-compare-mode";
 
+
 export type EditorFont = "sans" | "classic" | "mono" | "editorial";
 
 interface EditorState {
@@ -140,6 +141,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     } finally {
       set({ hydrated: true });
     }
+
   },
 }));
 

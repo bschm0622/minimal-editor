@@ -10,12 +10,22 @@ interface SaveFilePickerOptionsLike {
   types?: FilePickerAcceptType[];
 }
 
+interface OpenFilePickerOptionsLike {
+  multiple?: boolean;
+  types?: FilePickerAcceptType[];
+}
+
 type ShowSaveFilePicker = (
   options?: SaveFilePickerOptionsLike
 ) => Promise<FileSystemFileHandle>;
 
+type ShowOpenFilePicker = (
+  options?: OpenFilePickerOptionsLike
+) => Promise<FileSystemFileHandle[]>;
+
 interface FilePickerWindow {
   showSaveFilePicker?: ShowSaveFilePicker;
+  showOpenFilePicker?: ShowOpenFilePicker;
 }
 
 const pickerWindow = globalThis as unknown as FilePickerWindow;
@@ -34,6 +44,22 @@ const markdownPickerTypes: FilePickerAcceptType[] = [
 export async function openFile(): Promise<string | null> {
   if (typeof document === "undefined") return null;
 
+  const picker = pickerWindow.showOpenFilePicker;
+  if (picker) {
+    try {
+      const [handle] = await picker({
+        multiple: false,
+        types: markdownPickerTypes,
+      });
+      const file = await handle.getFile();
+      useEditorStore.getState().setFileHandle(handle);
+      return await file.text();
+    } catch {
+      return null;
+    }
+  }
+
+  // Fallback for browsers without File System Access API
   return new Promise((resolve) => {
     const input = document.createElement("input");
     input.type = "file";

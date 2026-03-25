@@ -18,8 +18,9 @@ It is designed around one current draft:
 - Open an existing `.md` file
 - Save the current draft to a `.md` file
 - Local draft autosave
+- Compare Versions — paste another version of your draft and selectively apply changes
 - Focus mode
-- Font switching: sans, serif, mono
+- Font switching: Clean (Figtree), Warm (Bitter), Editorial (Source Serif 4), Code (Geist Mono)
 - Light and dark mode
 
 ## Writing Shortcuts
@@ -35,22 +36,39 @@ It is designed around one current draft:
 
 The app has two save layers:
 
-1. Local autosave
+1. **Local autosave**
    Your draft autosaves in this browser.
 
-2. File save
+2. **File save**
    The first time you save, you choose a `.md` file.
    After that, `Save` keeps writing to that file in the current tab.
    Use `Save as...` to switch files.
    Files only change when you explicitly save.
 
+## Compare Versions
+
+Compare your draft against another version and selectively apply changes:
+
+1. Open Compare Versions from the toolbar
+2. Paste the other version (e.g. an AI rewrite) into the text area
+3. The app diffs the two versions block-by-block
+4. Unchanged sections are shown dimmed for context
+5. Changed sections are highlighted with colored accents:
+   - Amber for revisions (text changed)
+   - Green for additions (new text)
+   - Red for removals (text deleted)
+6. For single-block revisions, an inline word diff shows exactly what changed
+7. Click "Apply" to accept a change, or "Edit before applying" to tweak the suggested text first
+8. Click "Done" to return to the editor
+
 ## Fonts
 
 The current defaults are:
 
-- Sans: `Figtree`
-- Serif: `Lora`
-- Mono: `Geist Mono`
+- Clean: `Figtree`
+- Warm: `Bitter`
+- Editorial: `Source Serif 4`
+- Code: `Geist Mono`
 
 ## Development
 
