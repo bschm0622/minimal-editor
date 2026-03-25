@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { Editor } from "@tiptap/core";
 import type { Selection } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
@@ -55,6 +55,7 @@ export function EditorBubbleMenu({
 }: EditorBubbleMenuProps) {
   const [linkDraft, setLinkDraft] = useState<string | null>(null);
   const selectionRef = useRef<Pick<Selection, "from" | "to"> | null>(null);
+  const linkInputRef = useRef<HTMLInputElement | null>(null);
   const focusEditor = useCallback(
     () => editor.chain().focus(undefined, { scrollIntoView: false }),
     [editor]
@@ -81,6 +82,17 @@ export function EditorBubbleMenu({
   const activeLinkUrl = editorState?.activeLinkUrl ?? "";
   const isLinkActive = editorState?.isLink ?? false;
   const linkUrl = linkDraft ?? activeLinkUrl;
+
+  useEffect(() => {
+    if (!linkOpen) return;
+
+    const focusInput = window.requestAnimationFrame(() => {
+      linkInputRef.current?.focus({ preventScroll: true });
+      linkInputRef.current?.select();
+    });
+
+    return () => window.cancelAnimationFrame(focusInput);
+  }, [linkOpen]);
 
   const rememberSelection = useCallback(() => {
     const { from, to } = editor.state.selection;
@@ -316,11 +328,11 @@ export function EditorBubbleMenu({
             className="flex gap-2"
           >
             <Input
+              ref={linkInputRef}
               placeholder="Paste or type a URL"
               value={linkUrl}
               onChange={(e) => setLinkDraft(e.target.value)}
               className="h-8 text-sm"
-              autoFocus
             />
             <Button size="sm" type="submit" className="h-8">
               Save
