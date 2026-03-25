@@ -137,6 +137,11 @@
   caret-color: var(--foreground);
 }
 
+.tiptap-editor {
+  padding-bottom: clamp(8rem, 35vh, 18rem);
+  scroll-padding-bottom: clamp(8rem, 35vh, 18rem);
+}
+
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;

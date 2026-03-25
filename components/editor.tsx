@@ -42,7 +42,8 @@ export function Editor() {
     autofocus: "end",
     editorProps: {
       attributes: {
-        class: "prose prose-neutral dark:prose-invert max-w-none outline-none min-h-[calc(100vh-8rem)] px-4 py-8 sm:px-0",
+        class:
+          "tiptap-editor prose prose-neutral dark:prose-invert max-w-none outline-none min-h-[calc(100vh-8rem)] px-4 pt-8 sm:px-0",
       },
       handlePaste(view, event) {
         const plainText = event.clipboardData?.getData("text/plain") ?? "";
