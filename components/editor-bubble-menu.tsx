@@ -11,6 +11,8 @@ import {
   TextItalicIcon,
   TextStrikethroughIcon,
   TextUnderlineIcon,
+  Copy01Icon,
+  CopyCheckIcon,
   CodeSimpleIcon,
   FileCodeIcon,
   Link01Icon,
@@ -31,6 +33,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { copyEditorSelectionAsMarkdown } from "@/lib/editor-file-actions";
 
 function normalizeLinkUrl(value: string) {
   const trimmed = value.trim();
@@ -55,6 +58,7 @@ export function EditorBubbleMenu({
   savedSelection,
 }: EditorBubbleMenuProps) {
   const [linkDraft, setLinkDraft] = useState<string | null>(null);
+  const [showCopyConfirmation, setShowCopyConfirmation] = useState(false);
   const selectionRef = useRef<Pick<Selection, "from" | "to"> | null>(null);
   const linkInputRef = useRef<HTMLInputElement | null>(null);
   const focusEditor = useCallback(
@@ -158,6 +162,26 @@ export function EditorBubbleMenu({
     onLinkOpenChange(true);
   }, [onLinkOpenChange, rememberSelection]);
 
+  const copySelection = useCallback(async () => {
+    if (!(await copyEditorSelectionAsMarkdown(editor))) {
+      return;
+    }
+
+    setShowCopyConfirmation(true);
+  }, [editor]);
+
+  useEffect(() => {
+    if (!showCopyConfirmation) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setShowCopyConfirmation(false);
+    }, 1200);
+
+    return () => window.clearTimeout(timeout);
+  }, [showCopyConfirmation]);
+
   return (
     <BubbleMenu
       editor={editor}
@@ -167,6 +191,31 @@ export function EditorBubbleMenu({
       className="flex max-w-[calc(100vw-1rem)] flex-wrap items-center gap-0.5 rounded-xl border border-border bg-background p-1 shadow-lg sm:max-w-none sm:flex-nowrap"
       onMouseDown={(event) => event.preventDefault()}
     >
+      <Button
+        size="icon-sm"
+        variant="outline"
+        className="size-8"
+        onClick={copySelection}
+        aria-label={
+          showCopyConfirmation
+            ? "Copied selection as Markdown"
+            : "Copy selection as Markdown"
+        }
+        title={
+          showCopyConfirmation
+            ? "Copied selection as Markdown"
+            : "Copy selection as Markdown"
+        }
+      >
+        <HugeiconsIcon
+          icon={showCopyConfirmation ? CopyCheckIcon : Copy01Icon}
+          size={16}
+          strokeWidth={2}
+        />
+      </Button>
+
+      <Separator orientation="vertical" className="mx-0.5 h-5" />
+
       {/* Inline formatting */}
       <Toggle
         size="sm"
