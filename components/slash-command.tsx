@@ -10,6 +10,8 @@ import {
   LeftToRightListBulletIcon,
   LeftToRightListNumberIcon,
   MinusSignIcon,
+  CheckmarkSquare02Icon,
+  TableIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import { ReactRenderer } from "@tiptap/react";
@@ -18,7 +20,14 @@ import Suggestion, {
   type SuggestionOptions,
 } from "@tiptap/suggestion";
 import tippy, { type Instance as TippyInstance } from "tippy.js";
-import { forwardRef, useCallback, useImperativeHandle, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react";
 
 interface CommandItem {
   title: string;
@@ -107,6 +116,19 @@ const COMMAND_ITEMS: CommandItem[] = [
     },
   },
   {
+    title: "Task List",
+    description: "Create a checklist with checkboxes",
+    aliases: ["task", "todo", "checklist", "checkbox"],
+    icon: CheckmarkSquare02Icon,
+    command: ({ editor, range }) => {
+      applyCommand({
+        editor,
+        range,
+        run: (chain) => chain.toggleTaskList(),
+      });
+    },
+  },
+  {
     title: "Quote",
     description: "Highlight a quote or callout",
     aliases: ["quote", "blockquote", ">"],
@@ -129,6 +151,20 @@ const COMMAND_ITEMS: CommandItem[] = [
         editor,
         range,
         run: (chain) => chain.toggleCodeBlock(),
+      });
+    },
+  },
+  {
+    title: "Table",
+    description: "Insert a table with header cells",
+    aliases: ["table", "grid", "cells", "spreadsheet"],
+    icon: TableIcon,
+    command: ({ editor, range }) => {
+      applyCommand({
+        editor,
+        range,
+        run: (chain) =>
+          chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }),
       });
     },
   },
@@ -159,8 +195,17 @@ interface CommandListRef {
 const CommandList = forwardRef<CommandListRef, CommandListProps>(
   ({ items, command }, ref) => {
     const [selectedTitle, setSelectedTitle] = useState<string | null>(null);
+    const listRef = useRef<HTMLDivElement | null>(null);
     const selectedIndex = items.findIndex((item) => item.title === selectedTitle);
     const activeIndex = selectedIndex >= 0 ? selectedIndex : 0;
+
+    useEffect(() => {
+      const activeButton = listRef.current?.querySelector<HTMLButtonElement>(
+        `[data-command-index="${activeIndex}"]`
+      );
+
+      activeButton?.scrollIntoView({ block: "nearest" });
+    }, [activeIndex]);
 
     const selectItem = useCallback(
       (index: number) => {
@@ -203,9 +248,14 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(
 
     return (
       <div className="z-50 w-72 overflow-hidden rounded-2xl border border-border bg-background/98 p-1.5 shadow-xl backdrop-blur-sm">
+        <div
+          ref={listRef}
+          className="max-h-[min(22rem,calc(100vh-10rem))] overflow-y-auto pr-0.5"
+        >
         {items.map((item, index) => (
           <button
             key={item.title}
+            data-command-index={index}
             type="button"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => selectItem(index)}
@@ -234,6 +284,7 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(
             </span>
           </button>
         ))}
+        </div>
       </div>
     );
   }

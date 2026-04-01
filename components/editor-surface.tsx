@@ -8,22 +8,72 @@ import {
   type MouseEvent,
 } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
-import type { Editor } from "@tiptap/core";
+import {
+  Extension,
+  findParentNodeClosestToPos,
+  type Editor,
+} from "@tiptap/core";
 import { DOMParser as ProseMirrorDOMParser } from "@tiptap/pm/model";
 import type { Selection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions/placeholder";
 import { Focus } from "@tiptap/extensions/focus";
+import { Table } from "@tiptap/extension-table";
+import TableCell from "@tiptap/extension-table-cell";
+import TableHeader from "@tiptap/extension-table-header";
+import TableRow from "@tiptap/extension-table-row";
+import TaskItem from "@tiptap/extension-task-item";
+import TaskList from "@tiptap/extension-task-list";
 import type { EditorFont } from "@/lib/editor-store";
 import {
   looksLikeMarkdown,
   markdownToHtml,
   normalizeMarkdownPaste,
+  tabularTextToHtml,
 } from "@/lib/markdown";
 import { useEditorKeyboardShortcuts } from "@/lib/use-editor-keyboard-shortcuts";
 import { cn } from "@/lib/utils";
 import { EditorBubbleMenu } from "./editor-bubble-menu";
 import { SlashCommands } from "./slash-command";
+
+const TableEditingShortcuts = Extension.create({
+  name: "tableEditingShortcuts",
+  priority: 1000,
+  addKeyboardShortcuts() {
+    const deleteEmptyRow = () => {
+      const { selection } = this.editor.state;
+
+      if (!selection.empty) {
+        return false;
+      }
+
+      const cell = findParentNodeClosestToPos(
+        selection.$from,
+        (node) =>
+          node.type.name === "tableCell" || node.type.name === "tableHeader"
+      );
+      const row = findParentNodeClosestToPos(
+        selection.$from,
+        (node) => node.type.name === "tableRow"
+      );
+
+      if (!cell || !row) {
+        return false;
+      }
+
+      if (cell.node.textContent.trim() !== "" || row.node.textContent.trim() !== "") {
+        return false;
+      }
+
+      return this.editor.commands.deleteRow();
+    };
+
+    return {
+      Backspace: deleteEmptyRow,
+      Delete: deleteEmptyRow,
+    };
+  },
+});
 
 type EditorSurfaceProps = {
   content: string;
@@ -78,6 +128,20 @@ export function EditorSurface({
         className: "has-focus",
         mode: "deepest",
       }),
+      Table.configure({
+        resizable: false,
+        HTMLAttributes: {
+          class: "editor-table",
+        },
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      TaskList,
+      TaskItem.configure({
+        nested: true,
+      }),
+      TableEditingShortcuts,
       SlashCommands,
     ],
     content: "",
@@ -91,14 +155,22 @@ export function EditorSurface({
       },
       handlePaste(view, event) {
         const plainText = event.clipboardData?.getData("text/plain") ?? "";
+        const html = event.clipboardData?.getData("text/html") ?? "";
 
-        if (!plainText || !looksLikeMarkdown(plainText)) {
+        if (html.includes("<table")) {
+          return false;
+        }
+
+        const pasteHtml = looksLikeMarkdown(plainText)
+          ? markdownToHtml(normalizeMarkdownPaste(plainText))
+          : tabularTextToHtml(plainText);
+
+        if (!pasteHtml) {
           return false;
         }
 
         const wrapper = document.createElement("div");
-        wrapper.innerHTML = markdownToHtml(normalizeMarkdownPaste(plainText));
-
+        wrapper.innerHTML = pasteHtml;
         const slice = ProseMirrorDOMParser.fromSchema(view.state.schema).parseSlice(
           wrapper
         );

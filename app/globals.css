@@ -260,6 +260,58 @@
   margin: 2em 0;
 }
 
+.tiptap .tableWrapper {
+  margin: 1.75rem 0;
+  overflow-x: auto;
+}
+
+.tiptap table {
+  width: 100%;
+  min-width: 32rem;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.tiptap th,
+.tiptap td {
+  min-width: 7rem;
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.7rem;
+  vertical-align: top;
+  text-align: left;
+}
+
+.tiptap th {
+  background: color-mix(in oklab, var(--muted) 78%, transparent);
+  font-weight: 600;
+}
+
+.tiptap.prose :is(th, td) > :first-child {
+  margin-top: 0;
+}
+
+.tiptap.prose :is(th, td) > :last-child {
+  margin-bottom: 0;
+}
+
+.tiptap.prose :is(th, td) p {
+  margin-top: 0;
+  margin-bottom: 0;
+  line-height: 1.45;
+}
+
+.tiptap .selectedCell {
+  position: relative;
+}
+
+.tiptap .selectedCell::after {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, var(--accent) 45%, transparent);
+  content: "";
+  pointer-events: none;
+}
+
 .tiptap a[href],
 .tiptap.prose a[href] {
   color: var(--link) !important;

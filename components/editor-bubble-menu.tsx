@@ -17,6 +17,7 @@ import {
   Heading01Icon,
   Heading02Icon,
   Heading03Icon,
+  CheckmarkSquare02Icon,
   LeftToRightListBulletIcon,
   LeftToRightListNumberIcon,
   LeftToRightBlockQuoteIcon,
@@ -74,6 +75,7 @@ export function EditorBubbleMenu({
       isHeading3: currentEditor?.isActive("heading", { level: 3 }) ?? false,
       isBulletList: currentEditor?.isActive("bulletList") ?? false,
       isOrderedList: currentEditor?.isActive("orderedList") ?? false,
+      isTaskList: currentEditor?.isActive("taskList") ?? false,
       isBlockquote: currentEditor?.isActive("blockquote") ?? false,
       isCodeBlock: currentEditor?.isActive("codeBlock") ?? false,
       isLink: currentEditor?.isActive("link") ?? false,
@@ -272,6 +274,19 @@ export function EditorBubbleMenu({
       >
         <HugeiconsIcon
           icon={LeftToRightListNumberIcon}
+          size={16}
+          strokeWidth={2}
+        />
+      </Toggle>
+      <Toggle
+        size="sm"
+        className="px-2 sm:px-3"
+        pressed={editorState?.isTaskList}
+        onPressedChange={() => focusEditor().toggleTaskList().run()}
+        aria-label="Task list"
+      >
+        <HugeiconsIcon
+          icon={CheckmarkSquare02Icon}
           size={16}
           strokeWidth={2}
         />
