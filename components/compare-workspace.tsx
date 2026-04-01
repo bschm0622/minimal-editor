@@ -370,7 +370,7 @@ function BlockPreview({
   return (
     <div
       className={cn(
-        "prose prose-sm prose-neutral dark:prose-invert max-w-none select-text [&_h1]:text-inherit [&_h2]:text-inherit [&_h3]:text-inherit",
+        "editor-prose prose prose-sm prose-neutral dark:prose-invert max-w-none select-text [&_h1]:text-inherit [&_h2]:text-inherit [&_h3]:text-inherit",
         className
       )}
       dangerouslySetInnerHTML={{ __html: markdownToHtml(markdown) }}

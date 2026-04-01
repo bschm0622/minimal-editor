@@ -185,12 +185,14 @@
 }
 
 /* Prose overrides for minimal aesthetic */
-.tiptap.prose {
+.tiptap.prose,
+.editor-prose.prose {
   font-size: 1.0625rem;
   line-height: 1.75;
 }
 
-.tiptap.prose h1 {
+.tiptap.prose h1,
+.editor-prose.prose h1 {
   font-size: 2em;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
@@ -198,7 +200,8 @@
   letter-spacing: -0.02em;
 }
 
-.tiptap.prose h2 {
+.tiptap.prose h2,
+.editor-prose.prose h2 {
   font-size: 1.5em;
   margin-top: 1.25em;
   margin-bottom: 0.5em;
@@ -206,7 +209,8 @@
   letter-spacing: -0.01em;
 }
 
-.tiptap.prose h3 {
+.tiptap.prose h3,
+.editor-prose.prose h3 {
   font-size: 1.25em;
   margin-top: 1em;
   margin-bottom: 0.5em;
@@ -214,11 +218,14 @@
 }
 
 .tiptap.prose > :is(h1, h2, h3):first-child,
-.tiptap.prose > :is(h1, h2, h3).is-empty:first-child {
+.tiptap.prose > :is(h1, h2, h3).is-empty:first-child,
+.editor-prose.prose > :is(h1, h2, h3):first-child,
+.editor-prose.prose > :is(h1, h2, h3).is-empty:first-child {
   margin-top: 0 !important;
 }
 
-.tiptap.prose code {
+.tiptap.prose code,
+.editor-prose.prose code {
   background: var(--muted);
   padding: 0.15em 0.35em;
   border-radius: 0.25em;
@@ -228,11 +235,14 @@
 
 /* Remove backtick pseudo-elements from typography plugin */
 .tiptap.prose code::before,
-.tiptap.prose code::after {
+.tiptap.prose code::after,
+.editor-prose.prose code::before,
+.editor-prose.prose code::after {
   content: none !important;
 }
 
-.tiptap.prose pre {
+.tiptap.prose pre,
+.editor-prose.prose pre {
   background: var(--muted);
   color: var(--foreground);
   border: 1px solid var(--border);
@@ -241,21 +251,30 @@
   overflow-x: auto;
 }
 
-.tiptap.prose pre code {
+.tiptap.prose pre code,
+.editor-prose.prose pre code {
   background: none;
   padding: 0;
   color: inherit;
   font-size: 0.875em;
 }
 
-.tiptap.prose blockquote {
+.tiptap.prose blockquote,
+.editor-prose.prose blockquote {
   border-left: 3px solid var(--border);
   padding-left: 1em;
   color: var(--muted-foreground);
-  font-style: italic;
 }
 
-.tiptap.prose hr {
+.tiptap.prose blockquote p:first-of-type::before,
+.tiptap.prose blockquote p:last-of-type::after,
+.editor-prose.prose blockquote p:first-of-type::before,
+.editor-prose.prose blockquote p:last-of-type::after {
+  content: none;
+}
+
+.tiptap.prose hr,
+.editor-prose.prose hr {
   border-color: var(--border);
   margin: 2em 0;
 }
@@ -286,15 +305,18 @@
   font-weight: 600;
 }
 
-.tiptap.prose :is(th, td) > :first-child {
+.tiptap.prose :is(th, td) > :first-child,
+.editor-prose.prose :is(th, td) > :first-child {
   margin-top: 0;
 }
 
-.tiptap.prose :is(th, td) > :last-child {
+.tiptap.prose :is(th, td) > :last-child,
+.editor-prose.prose :is(th, td) > :last-child {
   margin-bottom: 0;
 }
 
-.tiptap.prose :is(th, td) p {
+.tiptap.prose :is(th, td) p,
+.editor-prose.prose :is(th, td) p {
   margin-top: 0;
   margin-bottom: 0;
   line-height: 1.45;
@@ -313,7 +335,8 @@
 }
 
 .tiptap a[href],
-.tiptap.prose a[href] {
+.tiptap.prose a[href],
+.editor-prose.prose a[href] {
   color: var(--link) !important;
   text-decoration-line: underline !important;
   text-decoration-color: currentColor;
@@ -325,12 +348,14 @@
 }
 
 .tiptap a[href]:hover,
-.tiptap.prose a[href]:hover {
+.tiptap.prose a[href]:hover,
+.editor-prose.prose a[href]:hover {
   color: var(--link-hover) !important;
 }
 
 .tiptap a.editor-link[href],
-.tiptap.prose a.editor-link[href] {
+.tiptap.prose a.editor-link[href],
+.editor-prose.prose a.editor-link[href] {
   border-radius: 0;
   background: transparent;
   box-decoration-break: slice;

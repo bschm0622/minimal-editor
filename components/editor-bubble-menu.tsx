@@ -12,17 +12,9 @@ import {
   TextStrikethroughIcon,
   TextUnderlineIcon,
   Copy01Icon,
-  CopyCheckIcon,
+  Tick02Icon,
   CodeSimpleIcon,
-  FileCodeIcon,
   Link01Icon,
-  Heading01Icon,
-  Heading02Icon,
-  Heading03Icon,
-  CheckmarkSquare02Icon,
-  LeftToRightListBulletIcon,
-  LeftToRightListNumberIcon,
-  LeftToRightBlockQuoteIcon,
 } from "@hugeicons/core-free-icons";
 import { Toggle } from "@/components/ui/toggle";
 import {
@@ -74,14 +66,6 @@ export function EditorBubbleMenu({
       isUnderline: currentEditor?.isActive("underline") ?? false,
       isStrike: currentEditor?.isActive("strike") ?? false,
       isCode: currentEditor?.isActive("code") ?? false,
-      isHeading1: currentEditor?.isActive("heading", { level: 1 }) ?? false,
-      isHeading2: currentEditor?.isActive("heading", { level: 2 }) ?? false,
-      isHeading3: currentEditor?.isActive("heading", { level: 3 }) ?? false,
-      isBulletList: currentEditor?.isActive("bulletList") ?? false,
-      isOrderedList: currentEditor?.isActive("orderedList") ?? false,
-      isTaskList: currentEditor?.isActive("taskList") ?? false,
-      isBlockquote: currentEditor?.isActive("blockquote") ?? false,
-      isCodeBlock: currentEditor?.isActive("codeBlock") ?? false,
       isLink: currentEditor?.isActive("link") ?? false,
     }),
   });
@@ -188,7 +172,23 @@ export function EditorBubbleMenu({
       shouldShow={({ editor: currentEditor, from, to }) =>
         linkOpen || currentEditor.isActive("link") || from !== to
       }
-      className="flex max-w-[calc(100vw-1rem)] flex-wrap items-center gap-0.5 rounded-xl border border-border bg-background p-1 shadow-lg sm:max-w-none sm:flex-nowrap"
+      options={{
+        strategy: "fixed",
+        placement: "top",
+        offset: 8,
+        flip: {
+          fallbackPlacements: ["bottom", "top"],
+        },
+        shift: {
+          padding: {
+            top: 72,
+            right: 8,
+            bottom: 8,
+            left: 8,
+          },
+        },
+      }}
+      className="z-[60] flex max-w-[calc(100vw-1rem)] flex-wrap items-center gap-0.5 rounded-xl border border-border bg-background p-1 shadow-lg sm:max-w-none sm:flex-nowrap"
       onMouseDown={(event) => event.preventDefault()}
     >
       <Button
@@ -208,7 +208,7 @@ export function EditorBubbleMenu({
         }
       >
         <HugeiconsIcon
-          icon={showCopyConfirmation ? CopyCheckIcon : Copy01Icon}
+          icon={showCopyConfirmation ? Tick02Icon : Copy01Icon}
           size={16}
           strokeWidth={2}
         />
@@ -265,102 +265,6 @@ export function EditorBubbleMenu({
         aria-label="Inline code"
       >
         <HugeiconsIcon icon={CodeSimpleIcon} size={16} strokeWidth={2} />
-      </Toggle>
-
-      <Separator orientation="vertical" className="mx-0.5 h-5" />
-
-      {/* Headings */}
-      <Toggle
-        size="sm"
-        className="px-2 sm:px-3"
-        pressed={editorState?.isHeading1}
-        onPressedChange={() => focusEditor().toggleHeading({ level: 1 }).run()}
-        aria-label="Heading 1"
-      >
-        <HugeiconsIcon icon={Heading01Icon} size={16} strokeWidth={2} />
-      </Toggle>
-      <Toggle
-        size="sm"
-        className="px-2 sm:px-3"
-        pressed={editorState?.isHeading2}
-        onPressedChange={() => focusEditor().toggleHeading({ level: 2 }).run()}
-        aria-label="Heading 2"
-      >
-        <HugeiconsIcon icon={Heading02Icon} size={16} strokeWidth={2} />
-      </Toggle>
-      <Toggle
-        size="sm"
-        className="px-2 sm:px-3"
-        pressed={editorState?.isHeading3}
-        onPressedChange={() => focusEditor().toggleHeading({ level: 3 }).run()}
-        aria-label="Heading 3"
-      >
-        <HugeiconsIcon icon={Heading03Icon} size={16} strokeWidth={2} />
-      </Toggle>
-
-      <Separator orientation="vertical" className="mx-0.5 h-5" />
-
-      {/* Block formatting */}
-      <Toggle
-        size="sm"
-        className="px-2 sm:px-3"
-        pressed={editorState?.isBulletList}
-        onPressedChange={() => focusEditor().toggleBulletList().run()}
-        aria-label="Bullet list"
-      >
-        <HugeiconsIcon
-          icon={LeftToRightListBulletIcon}
-          size={16}
-          strokeWidth={2}
-        />
-      </Toggle>
-      <Toggle
-        size="sm"
-        className="px-2 sm:px-3"
-        pressed={editorState?.isOrderedList}
-        onPressedChange={() => focusEditor().toggleOrderedList().run()}
-        aria-label="Numbered list"
-      >
-        <HugeiconsIcon
-          icon={LeftToRightListNumberIcon}
-          size={16}
-          strokeWidth={2}
-        />
-      </Toggle>
-      <Toggle
-        size="sm"
-        className="px-2 sm:px-3"
-        pressed={editorState?.isTaskList}
-        onPressedChange={() => focusEditor().toggleTaskList().run()}
-        aria-label="Task list"
-      >
-        <HugeiconsIcon
-          icon={CheckmarkSquare02Icon}
-          size={16}
-          strokeWidth={2}
-        />
-      </Toggle>
-      <Toggle
-        size="sm"
-        className="px-2 sm:px-3"
-        pressed={editorState?.isBlockquote}
-        onPressedChange={() => focusEditor().toggleBlockquote().run()}
-        aria-label="Blockquote"
-      >
-        <HugeiconsIcon
-          icon={LeftToRightBlockQuoteIcon}
-          size={16}
-          strokeWidth={2}
-        />
-      </Toggle>
-      <Toggle
-        size="sm"
-        className="px-2 sm:px-3"
-        pressed={editorState?.isCodeBlock}
-        onPressedChange={() => focusEditor().toggleCodeBlock().run()}
-        aria-label="Code block"
-      >
-        <HugeiconsIcon icon={FileCodeIcon} size={16} strokeWidth={2} />
       </Toggle>
 
       <Separator orientation="vertical" className="mx-0.5 h-5" />

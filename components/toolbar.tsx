@@ -51,12 +51,14 @@ const HELP_SHORTCUTS = [
   { key: "Cmd/Ctrl + O", description: "Open a Markdown file" },
   { key: "Cmd/Ctrl + S", description: "Save to file" },
   { key: "Cmd/Ctrl + Shift + S", description: "Save as..." },
-  { key: "Cmd/Ctrl + Shift + C", description: "Copy as Markdown" },
+  { key: "Cmd/Ctrl + Shift + C", description: "Copy the full draft as Markdown" },
 ];
 
 const HELP_FEATURES = [
   "Your draft autosaves in this browser.",
   "Paste Markdown to turn it into rich text.",
+  "Use / to insert headings, lists, quotes, code blocks, tables, and dividers.",
+  "Select text to open the bubble menu for inline formatting, links, and copy-as-Markdown.",
   "The Save button shows whether your file is up to date.",
   "Files only change when you use Save or Save as....",
   "After you choose a file, Save keeps writing to that file in this tab.",
