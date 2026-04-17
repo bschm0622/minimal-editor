@@ -80,7 +80,6 @@ type EditorSurfaceProps = {
   onContentChange: (content: string) => void;
   onEditorReady?: (editor: Editor | null) => void;
   placeholder?: string;
-  autofocus?: "end" | false;
   enableFileShortcuts?: boolean;
   focusMode?: boolean;
   font?: EditorFont;
@@ -93,7 +92,6 @@ export function EditorSurface({
   onContentChange,
   onEditorReady,
   placeholder = "Start writing... Type / for blocks, or # for a heading.",
-  autofocus = false,
   enableFileShortcuts = false,
   focusMode = false,
   font = "sans",
@@ -145,7 +143,6 @@ export function EditorSurface({
       SlashCommands,
     ],
     content: "",
-    autofocus,
     editorProps: {
       attributes: {
         class: cn(
