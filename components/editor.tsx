@@ -18,7 +18,7 @@ export function Editor() {
       onEditorReady={setEditor}
       focusMode={focusMode}
       font={font}
-      autofocus="end"
+      autofocus="start"
       enableFileShortcuts
       containerClassName="mx-auto max-w-3xl"
     />
