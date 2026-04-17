@@ -13,7 +13,10 @@ import {
   findParentNodeClosestToPos,
   type Editor,
 } from "@tiptap/core";
-import { DOMParser as ProseMirrorDOMParser } from "@tiptap/pm/model";
+import {
+  DOMParser as ProseMirrorDOMParser,
+  type Node as ProseMirrorNode,
+} from "@tiptap/pm/model";
 import type { Selection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions/placeholder";
@@ -24,6 +27,7 @@ import TableHeader from "@tiptap/extension-table-header";
 import TableRow from "@tiptap/extension-table-row";
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
+import { findTable, TableMap } from "prosemirror-tables";
 import type { EditorFont } from "@/lib/editor-store";
 import {
   looksLikeMarkdown,
@@ -36,16 +40,22 @@ import { cn } from "@/lib/utils";
 import { EditorBubbleMenu } from "./editor-bubble-menu";
 import { SlashCommands } from "./slash-command";
 
+function nodeHasContent(node: ProseMirrorNode | null | undefined) {
+  return Boolean(node?.textContent.trim());
+}
+
 const TableEditingShortcuts = Extension.create({
   name: "tableEditingShortcuts",
   priority: 1000,
   addKeyboardShortcuts() {
-    const deleteEmptyRow = () => {
+    const deleteEmptyTableUnit = () => {
       const { selection } = this.editor.state;
 
       if (!selection.empty) {
         return false;
       }
+
+      const table = findTable(selection.$from);
 
       const cell = findParentNodeClosestToPos(
         selection.$from,
@@ -57,20 +67,30 @@ const TableEditingShortcuts = Extension.create({
         (node) => node.type.name === "tableRow"
       );
 
-      if (!cell || !row) {
+      if (!table || !cell || !row) {
         return false;
       }
 
-      if (cell.node.textContent.trim() !== "" || row.node.textContent.trim() !== "") {
+      if (nodeHasContent(cell.node)) {
         return false;
       }
 
-      return this.editor.commands.deleteRow();
+      if (!nodeHasContent(table.node)) {
+        return this.editor.commands.deleteTable();
+      }
+
+      const map = TableMap.get(table.node);
+
+      if (!nodeHasContent(row.node) && map.height > 1) {
+        return this.editor.commands.deleteRow();
+      }
+
+      return false;
     };
 
     return {
-      Backspace: deleteEmptyRow,
-      Delete: deleteEmptyRow,
+      Backspace: deleteEmptyTableUnit,
+      Delete: deleteEmptyTableUnit,
     };
   },
 });
@@ -106,6 +126,7 @@ export function EditorSurface({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
+        gapcursor: false,
         link: {
           openOnClick: false,
           enableClickSelection: true,

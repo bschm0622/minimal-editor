@@ -1,6 +1,12 @@
 "use client";
 
-import { Extension, type Editor, type Range } from "@tiptap/core";
+import {
+  Extension,
+  type Editor,
+  type Range,
+} from "@tiptap/core";
+import { createTable } from "@tiptap/extension-table";
+import { TextSelection } from "@tiptap/pm/state";
 import {
   FileCodeIcon,
   Heading01Icon,
@@ -47,6 +53,37 @@ function applyCommand({
   run: (chain: ReturnType<Editor["chain"]>) => ReturnType<Editor["chain"]>;
 }) {
   return run(editor.chain().focus().deleteRange(range)).run();
+}
+
+function insertTableCommand({
+  editor,
+  rows = 3,
+  cols = 3,
+  withHeaderRow = true,
+}: {
+  editor: Editor;
+  rows?: number;
+  cols?: number;
+  withHeaderRow?: boolean;
+}) {
+  const { selection } = editor.state;
+  const { $from } = selection;
+  const from = $from.parent.type.name === "paragraph" ? $from.before() : selection.from;
+  const to = $from.parent.type.name === "paragraph" ? $from.after() : selection.to;
+  const table = createTable(editor.schema, rows, cols, withHeaderRow);
+  const tr = editor.state.tr.replaceWith(from, to, table).scrollIntoView();
+  let selectionPos = from + 1;
+  let currentNode = table;
+
+  while (currentNode.firstChild) {
+    currentNode = currentNode.firstChild;
+    selectionPos += 1;
+  }
+
+  tr.setSelection(TextSelection.near(tr.doc.resolve(selectionPos)));
+  editor.view.dispatch(tr);
+
+  return true;
 }
 
 const COMMAND_ITEMS: CommandItem[] = [
@@ -159,12 +196,12 @@ const COMMAND_ITEMS: CommandItem[] = [
     description: "Insert a table with header cells",
     aliases: ["table", "grid", "cells", "spreadsheet"],
     icon: TableIcon,
-    command: ({ editor, range }) => {
-      applyCommand({
+    command: ({ editor }) => {
+      insertTableCommand({
         editor,
-        range,
-        run: (chain) =>
-          chain.insertTable({ rows: 3, cols: 3, withHeaderRow: true }),
+        rows: 3,
+        cols: 3,
+        withHeaderRow: true,
       });
     },
   },
