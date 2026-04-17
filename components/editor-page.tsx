@@ -13,6 +13,11 @@ export function EditorPage() {
   const hydrate = useEditorStore((state) => state.hydrate);
 
   useEffect(() => {
+    history.scrollRestoration = "manual";
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
     if (!hydrated) {
       hydrate();
     }
