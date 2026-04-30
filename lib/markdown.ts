@@ -30,9 +30,9 @@ turndown.use([highlightedCodeBlock, strikethrough, taskListItems]);
 
 function escapeMarkdownTableCell(content: string) {
   return content
+    .trim()
     .replace(/\n+/g, "<br>")
-    .replace(/\|/g, "\\|")
-    .trim();
+    .replace(/\|/g, "\\|");
 }
 
 function getElementIndex(node: Node) {

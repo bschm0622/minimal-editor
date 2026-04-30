@@ -80,7 +80,7 @@ function getTableButtonPosition(editor: Editor): TableButtonPosition | null {
   const rect = wrapper.getBoundingClientRect();
 
   return {
-    top: rect.bottom - 10,
+    top: rect.bottom + 8,
     right: window.innerWidth - rect.right + 10,
   };
 }
@@ -457,7 +457,6 @@ export function EditorBubbleMenu({
           style={{
             top: tableButtonPosition.top,
             right: tableButtonPosition.right,
-            transform: "translateY(-100%)",
           }}
           onMouseDown={(event) => event.preventDefault()}
         >
