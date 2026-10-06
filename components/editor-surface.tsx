@@ -3,12 +3,14 @@
 import {
   useEffect,
   useCallback,
+  useLayoutEffect,
   useRef,
   useState,
   type MouseEvent,
 } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import {
+  createDocument,
   Extension,
   findParentNodeClosestToPos,
   type Editor,
@@ -17,7 +19,7 @@ import {
   DOMParser as ProseMirrorDOMParser,
   type Node as ProseMirrorNode,
 } from "@tiptap/pm/model";
-import type { Selection } from "@tiptap/pm/state";
+import { EditorState, type Selection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import { Placeholder } from "@tiptap/extensions/placeholder";
 import { Focus } from "@tiptap/extensions/focus";
@@ -28,7 +30,11 @@ import TableRow from "@tiptap/extension-table-row";
 import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
 import { findTable, TableMap } from "prosemirror-tables";
-import type { EditorFont } from "@/lib/editor-store";
+import {
+  docSessions,
+  readDocContent,
+  type EditorFont,
+} from "@/lib/editor-store";
 import {
   looksLikeMarkdown,
   markdownToHtml,
@@ -96,11 +102,12 @@ const TableEditingShortcuts = Extension.create({
 });
 
 type EditorSurfaceProps = {
-  content: string;
-  onContentChange: (content: string) => void;
+  docId: string;
+  /** Changes when the doc's stored content was replaced from outside this editor. */
+  docRevision?: number;
+  onChange: (editor: Editor) => void;
   onEditorReady?: (editor: Editor | null) => void;
   placeholder?: string;
-  enableFileShortcuts?: boolean;
   focusMode?: boolean;
   font?: EditorFont;
   containerClassName?: string;
@@ -108,17 +115,18 @@ type EditorSurfaceProps = {
 };
 
 export function EditorSurface({
-  content,
-  onContentChange,
+  docId,
+  docRevision = 0,
+  onChange,
   onEditorReady,
   placeholder = "Start writing... Type / for blocks, or # for a heading.",
-  enableFileShortcuts = false,
   focusMode = false,
   font = "sans",
   containerClassName,
   contentClassName,
 }: EditorSurfaceProps) {
-  const initialContentAppliedRef = useRef(false);
+  const loadedDocRef = useRef<{ id: string; revision: number } | null>(null);
+  const onChangeRef = useRef(onChange);
   const [linkMenuOpen, setLinkMenuOpen] = useState(false);
   const [linkSelection, setLinkSelection] = useState<Pick<Selection, "from" | "to"> | null>(null);
 
@@ -215,7 +223,7 @@ export function EditorSurface({
       },
     },
     onUpdate: ({ editor: currentEditor }) => {
-      onContentChange(currentEditor.getHTML());
+      onChangeRef.current(currentEditor);
     },
   });
 
@@ -228,9 +236,12 @@ export function EditorSurface({
     setLinkMenuOpen(true);
   }, [editor]);
 
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
   useEditorKeyboardShortcuts(editor, {
     onOpenLinkEditor: openLinkMenu,
-    enableFileCommands: enableFileShortcuts,
   });
 
   useEffect(() => {
@@ -238,22 +249,39 @@ export function EditorSurface({
     return () => onEditorReady?.(null);
   }, [editor, onEditorReady]);
 
-  useEffect(() => {
-    if (!editor || initialContentAppliedRef.current) return;
+  // One editor instance serves every doc: swap ProseMirror states instead of
+  // remounting, so each doc keeps its own undo history and scroll position.
+  useLayoutEffect(() => {
+    if (!editor) return;
 
-    if (content) {
-      editor.commands.setContent(content, { emitUpdate: false });
+    const loaded = loadedDocRef.current;
+    if (loaded?.id === docId && loaded.revision === docRevision) return;
+
+    if (loaded && loaded.id !== docId) {
+      docSessions.set(loaded.id, {
+        state: editor.state,
+        scrollY: window.scrollY,
+      });
     }
 
-    initialContentAppliedRef.current = true;
-  }, [content, editor]);
+    const session = loaded?.id === docId ? undefined : docSessions.get(docId);
 
-  useEffect(() => {
-    if (!editor || !initialContentAppliedRef.current) return;
-    if (content === editor.getHTML()) return;
+    if (session) {
+      editor.view.updateState(session.state);
+    } else {
+      const doc = createDocument(readDocContent(docId), editor.schema);
+      editor.view.updateState(
+        EditorState.create({ doc, plugins: editor.state.plugins })
+      );
+    }
 
-    editor.commands.setContent(content, { emitUpdate: false });
-  }, [content, editor]);
+    loadedDocRef.current = { id: docId, revision: docRevision };
+
+    if (loaded?.id === docId) return;
+
+    window.scrollTo({ top: session?.scrollY ?? 0, behavior: "instant" });
+    editor.commands.focus(session ? null : "start", { scrollIntoView: false });
+  }, [docId, docRevision, editor]);
 
   const handleContainerClick = useCallback(
     (event: MouseEvent<HTMLDivElement>) => {

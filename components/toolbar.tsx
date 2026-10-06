@@ -3,10 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
+  Add01Icon,
   Copy01Icon,
-  FloppyDiskIcon,
-  FolderOpenIcon,
-  GitCompareIcon,
   CenterFocusIcon,
   HelpCircleIcon,
   Moon02Icon,
@@ -14,14 +12,13 @@ import {
   Sun01Icon,
   TextFontIcon,
 } from "@hugeicons/core-free-icons";
+import { useShallow } from "zustand/react/shallow";
 import { useEditorStore, type EditorFont } from "@/lib/editor-store";
 import {
-  copyCurrentDraftAsMarkdown,
-  MANUAL_FILE_SAVE_EVENT,
-  openMarkdownFileIntoStore,
-  saveCurrentDraftToFile,
-  saveCurrentDraftToNewFile,
-} from "@/lib/editor-file-actions";
+  COPY_MARKDOWN_EVENT,
+  copyDocAsMarkdown,
+} from "@/lib/use-editor-keyboard-shortcuts";
+import { DocTabs } from "@/components/doc-tabs";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -48,34 +45,38 @@ const FONT_OPTIONS: { value: EditorFont; label: string; sample: string }[] = [
 const HELP_SHORTCUTS = [
   { key: "/", description: "Open the block menu" },
   { key: "#, ##, ###", description: "Create headings" },
-  { key: "Cmd/Ctrl + O", description: "Open a Markdown file" },
-  { key: "Cmd/Ctrl + S", description: "Save to file" },
-  { key: "Cmd/Ctrl + Shift + S", description: "Save as..." },
-  { key: "Cmd/Ctrl + Shift + C", description: "Copy the full draft as Markdown" },
+  { key: "Cmd/Ctrl + K", description: "Add a link" },
+  { key: "Cmd/Ctrl + Shift + C", description: "Copy the doc as Markdown" },
+  { key: "Alt + N", description: "New doc" },
+  { key: "Alt + W", description: "Close doc" },
+  { key: "Alt + [ / ]", description: "Previous / next doc" },
+  { key: "Alt + 1–9", description: "Jump to a doc" },
 ];
 
 const HELP_FEATURES = [
-  "Your draft autosaves in this browser.",
+  "Every doc autosaves in this browser as you type.",
   "Paste Markdown to turn it into rich text.",
-  "Use / to insert headings, lists, quotes, code blocks, tables, and dividers.",
-  "Select text to open the bubble menu for inline formatting, links, and copy-as-Markdown.",
-  "The Save button shows whether your file is up to date.",
-  "Files only change when you use Save or Save as....",
-  "After you choose a file, Save keeps writing to that file in this tab.",
-  "Use Save as... to switch files.",
+  "Select text for inline formatting, links, and copy-as-Markdown.",
+  "A doc's tab is named after its first line.",
 ];
 
+const wordFormatter = new Intl.NumberFormat();
+
 export function Toolbar() {
-  const {
-    fileHandle,
-    focusMode,
-    font,
-    fileDirty,
-    compareMode,
-    toggleFocusMode,
-    setFont,
-    setCompareMode,
-  } = useEditorStore();
+  const { focusMode, font, toggleFocusMode, setFont, newDoc } = useEditorStore(
+    useShallow((state) => ({
+      focusMode: state.focusMode,
+      font: state.font,
+      toggleFocusMode: state.toggleFocusMode,
+      setFont: state.setFont,
+      newDoc: state.newDoc,
+    }))
+  );
+  const words = useEditorStore(
+    (state) => state.docs.find((d) => d.id === state.activeId)?.words ?? 0
+  );
+  const lastClosed = useEditorStore((state) => state.lastClosed);
+  const undoClose = useEditorStore((state) => state.undoClose);
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
 
@@ -85,7 +86,7 @@ export function Toolbar() {
     return window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
   const [expanded, setExpanded] = useState(false);
-  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
+  const [showCopyConfirmation, setShowCopyConfirmation] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -102,10 +103,10 @@ export function Toolbar() {
   }, [isDark]);
 
   useEffect(() => {
-    const handleManualSave = () => {
-      setShowSaveConfirmation(true);
+    const handleCopy = () => {
+      setShowCopyConfirmation(true);
       const timeout = window.setTimeout(() => {
-        setShowSaveConfirmation(false);
+        setShowCopyConfirmation(false);
       }, 1200);
 
       return timeout;
@@ -116,12 +117,12 @@ export function Toolbar() {
       if (timeout) {
         window.clearTimeout(timeout);
       }
-      timeout = handleManualSave();
+      timeout = handleCopy();
     };
 
-    window.addEventListener(MANUAL_FILE_SAVE_EVENT, listener);
+    window.addEventListener(COPY_MARKDOWN_EVENT, listener);
     return () => {
-      window.removeEventListener(MANUAL_FILE_SAVE_EVENT, listener);
+      window.removeEventListener(COPY_MARKDOWN_EVENT, listener);
       if (timeout) {
         window.clearTimeout(timeout);
       }
@@ -135,39 +136,11 @@ export function Toolbar() {
     localStorage.setItem("minimal-editor-theme", next ? "dark" : "light");
   }, [isDark]);
 
-  const handleSave = useCallback(async () => {
-    if (await saveCurrentDraftToFile()) {
-      setExpanded(false);
-    }
-  }, []);
-
-  const handleSaveAs = useCallback(async () => {
-    if (await saveCurrentDraftToNewFile()) {
-      setExpanded(false);
-    }
-  }, []);
-
   const handleCopyMarkdown = useCallback(async () => {
-    await copyCurrentDraftAsMarkdown();
+    const { editor } = useEditorStore.getState();
+    if (editor) await copyDocAsMarkdown(editor);
   }, []);
 
-  const handleOpenFile = useCallback(async () => {
-    if (await openMarkdownFileIntoStore()) {
-      setExpanded(false);
-    }
-  }, []);
-
-  const fileStatusClassName = !fileHandle
-    ? "hidden"
-    : fileDirty
-      ? "bg-amber-500"
-      : "bg-emerald-500";
-
-  const fileStatusLabel = !fileHandle
-    ? "No file selected"
-    : fileDirty
-      ? "File has unsaved changes"
-      : "File is up to date";
   const tooltipFontClassName =
     font === "editorial"
       ? "font-editorial"
@@ -177,16 +150,13 @@ export function Toolbar() {
           ? "font-mono"
           : "font-sans";
 
-  const showFileActions = !compareMode;
-  const showFocusModeToggle = !compareMode;
-
   return (
     <header
       className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between px-4 py-3"
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
     >
-      <div className="flex items-center">
+      <div className="flex min-w-0 flex-1 items-center gap-3 pr-3">
         <button
           type="button"
           onClick={() => setExpanded((open) => !open)}
@@ -202,7 +172,7 @@ export function Toolbar() {
         </button>
 
         <div
-          className={`hidden items-center justify-center transition-all duration-200 sm:flex ${
+          className={`hidden shrink-0 items-center justify-center transition-all duration-200 sm:flex ${
             expanded ? "text-muted-foreground" : "text-muted-foreground/30"
           }`}
         >
@@ -211,20 +181,8 @@ export function Toolbar() {
             size={18}
             strokeWidth={1.5}
           />
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <span
-                  aria-label={fileStatusLabel}
-                  className={`ml-2 size-2 rounded-full transition-colors ${fileStatusClassName}`}
-                />
-              }
-            />
-            <TooltipContent className={tooltipFontClassName}>
-              {fileStatusLabel}
-            </TooltipContent>
-          </Tooltip>
         </div>
+        <DocTabs dimmed={!expanded} />
       </div>
 
       {/* Action buttons */}
@@ -235,99 +193,50 @@ export function Toolbar() {
             : "pointer-events-none translate-y-[-60%] opacity-0 sm:-translate-y-1"
         }`}
       >
+        <span
+          className="hidden px-2 text-xs tabular-nums text-muted-foreground sm:inline"
+          aria-live="polite"
+        >
+          {wordFormatter.format(words)} {words === 1 ? "word" : "words"}
+        </span>
+
         <Tooltip>
           <TooltipTrigger
             render={
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => setCompareMode(!compareMode)}
-                aria-label="Toggle compare mode"
-                className={compareMode ? "bg-accent" : ""}
+                onClick={newDoc}
+                aria-label="New doc"
               />
             }
           >
-            <HugeiconsIcon
-              icon={GitCompareIcon}
-              size={18}
-              strokeWidth={1.5}
-            />
+            <HugeiconsIcon icon={Add01Icon} size={18} strokeWidth={1.5} />
           </TooltipTrigger>
           <TooltipContent className={tooltipFontClassName}>
-            Compare versions
+            New doc
           </TooltipContent>
         </Tooltip>
 
-        {showFileActions ? (
-          <>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={handleOpenFile}
-                    aria-label="Open file"
-                  />
-                }
-              >
-                <HugeiconsIcon icon={FolderOpenIcon} size={18} strokeWidth={1.5} />
-              </TooltipTrigger>
-              <TooltipContent className={tooltipFontClassName}>
-                Open file
-              </TooltipContent>
-            </Tooltip>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={handleCopyMarkdown}
+                aria-label="Copy as Markdown"
+              />
+            }
+          >
+            <HugeiconsIcon icon={Copy01Icon} size={18} strokeWidth={1.5} />
+          </TooltipTrigger>
+          <TooltipContent className={tooltipFontClassName}>
+            Copy as Markdown
+          </TooltipContent>
+        </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={handleSave}
-                    aria-label={fileHandle ? "Save to current file" : "Save as"}
-                    className={
-                      fileDirty
-                        ? "text-amber-500 dark:text-amber-400"
-                        : fileHandle
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : ""
-                    }
-                  />
-                }
-              >
-                <HugeiconsIcon icon={FloppyDiskIcon} size={18} strokeWidth={1.5} />
-              </TooltipTrigger>
-              <TooltipContent className={tooltipFontClassName}>
-                {fileHandle
-                  ? fileDirty
-                    ? "Unsaved file changes"
-                    : "Saved to file"
-                  : "Save as..."}
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={handleCopyMarkdown}
-                    aria-label="Copy as Markdown"
-                  />
-                }
-              >
-                <HugeiconsIcon icon={Copy01Icon} size={18} strokeWidth={1.5} />
-              </TooltipTrigger>
-              <TooltipContent className={tooltipFontClassName}>
-                Copy as Markdown
-              </TooltipContent>
-            </Tooltip>
-
-            <Separator orientation="vertical" className="mx-1 h-5" />
-          </>
-        ) : null}
+        <Separator orientation="vertical" className="mx-1 h-5" />
 
         {/* Font picker */}
         <Popover>
@@ -385,8 +294,7 @@ export function Toolbar() {
           </PopoverContent>
         </Popover>
 
-        {showFocusModeToggle ? (
-          <Tooltip>
+        <Tooltip>
             <TooltipTrigger
               render={
                 <Button
@@ -408,7 +316,6 @@ export function Toolbar() {
               Focus mode
             </TooltipContent>
           </Tooltip>
-        ) : null}
 
         <Tooltip>
           <TooltipTrigger
@@ -486,7 +393,7 @@ export function Toolbar() {
 
             <div className="space-y-2">
               <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                File behavior
+                Good to know
               </p>
               <div className="space-y-2 text-sm text-muted-foreground">
                 {HELP_FEATURES.map((item) => (
@@ -495,37 +402,34 @@ export function Toolbar() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/30 px-3 py-2">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-foreground">
-                  {fileHandle
-                    ? "Save will write to the current file."
-                    : "Save will ask you to choose a file."}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {fileHandle
-                    ? "Use Save as... if you want to switch files. Draft autosave stays local."
-                    : "After that, Save keeps writing to the same file in this tab."}
-                </p>
-              </div>
-              <Button variant="outline" size="sm" onClick={handleSaveAs}>
-                Save as...
-              </Button>
-            </div>
           </PopoverContent>
         </Popover>
       </div>
 
       <div
         className={`pointer-events-none fixed right-3 z-60 rounded-full border border-border bg-background/95 px-3 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur-sm transition-all duration-200 sm:right-4 ${
-          showSaveConfirmation
+          showCopyConfirmation
             ? "translate-y-0 opacity-100"
             : "-translate-y-2 opacity-0"
         }`}
         style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
       >
-        Saved to file
+        Copied as Markdown
       </div>
+
+      {lastClosed ? (
+        <div
+          role="status"
+          className="fixed bottom-4 left-1/2 z-60 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border bg-background/95 py-1 pr-1 pl-4 text-sm text-muted-foreground shadow-lg backdrop-blur-sm"
+        >
+          <span className="max-w-56 truncate">
+            Closed “{lastClosed.doc.title || "Untitled"}”
+          </span>
+          <Button variant="ghost" size="xs" onClick={undoClose}>
+            Undo
+          </Button>
+        </div>
+      ) : null}
     </header>
   );
 }

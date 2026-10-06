@@ -34,7 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { copyEditorSelectionAsMarkdown } from "@/lib/editor-file-actions";
+import { copyEditorSelectionAsMarkdown } from "@/lib/editor-copy-actions";
 
 function normalizeLinkUrl(value: string) {
   const trimmed = value.trim();

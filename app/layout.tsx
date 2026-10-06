@@ -1,29 +1,30 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Figtree, Source_Serif_4, Bitter } from "next/font/google";
+import { Geist_Mono, Figtree, Source_Serif_4, Bitter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
 const figtree = Figtree({subsets:['latin'],variable:'--font-sans'});
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false,
 });
 
 const sourceSerif = Source_Serif_4({
   variable: "--font-serif",
   subsets: ["latin"],
+  preload: false,
 });
 
 const bitter = Bitter({
   variable: "--font-classic",
   subsets: ["latin"],
+  preload: false,
 });
+
+// Runs before first paint so dark mode doesn't flash light on load.
+const themeScript = `try{var t=localStorage.getItem("minimal-editor-theme");if(t?t==="dark":matchMedia("(prefers-color-scheme: dark)").matches)document.documentElement.classList.add("dark")}catch(e){}`;
 
 export const metadata: Metadata = {
   title: "Minimal Editor",
@@ -51,10 +52,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={cn(
         "h-full",
         "antialiased",
-        geistSans.variable,
         geistMono.variable,
         "font-sans",
         figtree.variable,
@@ -62,6 +63,9 @@ export default function RootLayout({
         bitter.variable
       )}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
