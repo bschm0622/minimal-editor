@@ -515,11 +515,13 @@ export function EditorBubbleMenu({
         ref={menuRef}
         editor={editor}
         pluginKey={BUBBLE_MENU_PLUGIN_KEY}
+        // Show as soon as a selection exists, not after the default pause.
+        updateDelay={0}
         shouldShow={shouldShowMenu}
         options={bubbleMenuOptions}
         className={
           menuMode === "handle"
-            ? "z-[60] flex animate-in rounded-full border border-border bg-background p-0.5 shadow-md duration-150 fade-in-0 zoom-in-90"
+            ? "z-[60] flex animate-in items-center gap-0.5 rounded-full border border-border bg-background p-0.5 shadow-md duration-150 fade-in-0 zoom-in-90"
             : "z-[60] flex max-w-[calc(100vw-1rem)] flex-wrap items-center gap-0.5 rounded-xl border border-border bg-background p-1 shadow-lg sm:max-w-none sm:flex-nowrap"
         }
         onMouseDown={(event) => {
@@ -652,17 +654,40 @@ export function EditorBubbleMenu({
         ) : null}
 
         {menuMode === "handle" ? (
-          <MenuTooltip label="Format">
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              className="size-7 rounded-full"
-              onClick={() => setFormatExpanded(true)}
-              aria-label="Show formatting"
+          <>
+            <MenuTooltip label="Format">
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                className="size-7 rounded-full"
+                onClick={() => setFormatExpanded(true)}
+                aria-label="Show formatting"
+              >
+                <HugeiconsIcon icon={TextFontIcon} size={15} strokeWidth={2} />
+              </Button>
+            </MenuTooltip>
+            <MenuTooltip
+              label={showCopyConfirmation ? "Copied" : "Copy as Markdown"}
             >
-              <HugeiconsIcon icon={TextFontIcon} size={15} strokeWidth={2} />
-            </Button>
-          </MenuTooltip>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                className="size-7 rounded-full"
+                onClick={copySelection}
+                aria-label={
+                  showCopyConfirmation
+                    ? "Copied selection as Markdown"
+                    : "Copy selection as Markdown"
+                }
+              >
+                <HugeiconsIcon
+                  icon={showCopyConfirmation ? Tick02Icon : Copy01Icon}
+                  size={15}
+                  strokeWidth={2}
+                />
+              </Button>
+            </MenuTooltip>
+          </>
         ) : null}
 
         {menuMode === "format" ? (
