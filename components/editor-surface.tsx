@@ -19,8 +19,9 @@ import {
   DOMParser as ProseMirrorDOMParser,
   type Node as ProseMirrorNode,
 } from "@tiptap/pm/model";
-import { EditorState, type Selection } from "@tiptap/pm/state";
+import { EditorState, TextSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
+import { Link } from "@tiptap/extension-link";
 import { Placeholder } from "@tiptap/extensions/placeholder";
 import { Focus } from "@tiptap/extensions/focus";
 import { Table } from "@tiptap/extension-table";
@@ -128,23 +129,25 @@ export function EditorSurface({
   const loadedDocRef = useRef<{ id: string; revision: number } | null>(null);
   const onChangeRef = useRef(onChange);
   const [linkMenuOpen, setLinkMenuOpen] = useState(false);
-  const [linkSelection, setLinkSelection] = useState<Pick<Selection, "from" | "to"> | null>(null);
 
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         gapcursor: false,
-        link: {
-          openOnClick: false,
-          enableClickSelection: true,
-          autolink: true,
-          linkOnPaste: true,
-          HTMLAttributes: {
-            class: "editor-link",
-            target: null,
-            rel: null,
-          },
+        link: false,
+      }),
+      // Autolink makes links inclusive by default, so typing at the end of
+      // a link would grow it. Links should stop where they end.
+      Link.extend({ inclusive: () => false }).configure({
+        openOnClick: false,
+        enableClickSelection: true,
+        autolink: true,
+        linkOnPaste: true,
+        HTMLAttributes: {
+          class: "editor-link",
+          target: null,
+          rel: null,
         },
       }),
       Placeholder.configure({
@@ -204,7 +207,7 @@ export function EditorSurface({
         view.dispatch(view.state.tr.replaceSelection(slice));
         return true;
       },
-      handleClick(view, _, event) {
+      handleClick(view, pos, event) {
         const target = event.target;
 
         if (!(target instanceof HTMLElement)) {
@@ -218,8 +221,19 @@ export function EditorSurface({
         }
 
         event.preventDefault();
+
+        if (event.metaKey || event.ctrlKey) {
+          window.open(anchor.getAttribute("href") ?? "", "_blank", "noopener,noreferrer");
+          return true;
+        }
+
+        // Links are draggable, so Chrome only places the caret on mouseup,
+        // which preventDefault above cancels. Place it ourselves.
+        view.dispatch(
+          view.state.tr.setSelection(TextSelection.create(view.state.doc, pos))
+        );
         view.focus();
-        return false;
+        return true;
       },
     },
     onUpdate: ({ editor: currentEditor }) => {
@@ -228,13 +242,8 @@ export function EditorSurface({
   });
 
   const openLinkMenu = useCallback(() => {
-    if (editor) {
-      const { from, to } = editor.state.selection;
-      setLinkSelection({ from, to });
-    }
-
     setLinkMenuOpen(true);
-  }, [editor]);
+  }, []);
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -294,14 +303,6 @@ export function EditorSurface({
     [editor]
   );
 
-  const handleLinkMenuOpenChange = useCallback((open: boolean) => {
-    setLinkMenuOpen(open);
-
-    if (!open) {
-      setLinkSelection(null);
-    }
-  }, []);
-
   if (!editor) return null;
 
   return (
@@ -320,8 +321,7 @@ export function EditorSurface({
       <EditorBubbleMenu
         editor={editor}
         linkOpen={linkMenuOpen}
-        onLinkOpenChange={handleLinkMenuOpenChange}
-        savedSelection={linkSelection}
+        onLinkOpenChange={setLinkMenuOpen}
       />
       <EditorContent editor={editor} />
     </div>

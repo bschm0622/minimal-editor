@@ -46,6 +46,7 @@ const HELP_SHORTCUTS = [
   { key: "/", description: "Open the block menu" },
   { key: "#, ##, ###", description: "Create headings" },
   { key: "Cmd/Ctrl + K", description: "Add a link" },
+  { key: "Cmd/Ctrl + click", description: "Open a link" },
   { key: "Cmd/Ctrl + Shift + C", description: "Copy the doc as Markdown" },
   { key: "Alt + N", description: "New doc" },
   { key: "Alt + W", description: "Close doc" },
