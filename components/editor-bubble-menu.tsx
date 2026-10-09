@@ -21,6 +21,7 @@ import {
   TextUnderlineIcon,
   Copy01Icon,
   Tick02Icon,
+  TextFontIcon,
   ArrowTurnBackwardIcon,
   CodeSimpleIcon,
   Link01Icon,
@@ -198,6 +199,8 @@ export function EditorBubbleMenu({
 }: EditorBubbleMenuProps) {
   const [linkDraft, setLinkDraft] = useState<string | null>(null);
   const [linkInvalid, setLinkInvalid] = useState(false);
+  // Selecting text shows a small handle; the full bar opens only on request.
+  const [formatExpanded, setFormatExpanded] = useState(false);
   const [showCopyConfirmation, setShowCopyConfirmation] = useState(false);
   const [tableMenuOpen, setTableMenuOpen] = useState(false);
   const [tableButtonPosition, setTableButtonPosition] =
@@ -266,7 +269,9 @@ export function EditorBubbleMenu({
     ? "link-edit"
     : isLinkActive && isSelectionEmpty
       ? "link"
-      : "format";
+      : formatExpanded
+        ? "format"
+        : "handle";
   const showTableControls = editorState?.isTable ?? false;
 
   const runTableCommand = useCallback(
@@ -282,6 +287,27 @@ export function EditorBubbleMenu({
     },
     [focusEditor]
   );
+
+  // Any new selection starts collapsed again. Formatting the current
+  // selection doesn't move it, so the bar stays open while you work.
+  useEffect(() => {
+    const collapse = () => setFormatExpanded(false);
+    editor.on("selectionUpdate", collapse);
+    return () => {
+      editor.off("selectionUpdate", collapse);
+    };
+  }, [editor]);
+
+  useEffect(() => {
+    if (!formatExpanded) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFormatExpanded(false);
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [formatExpanded]);
 
   const shouldShowMenu = useCallback(
     ({ editor: currentEditor, from, to }: { editor: Editor; from: number; to: number }) =>
@@ -491,7 +517,11 @@ export function EditorBubbleMenu({
         pluginKey={BUBBLE_MENU_PLUGIN_KEY}
         shouldShow={shouldShowMenu}
         options={bubbleMenuOptions}
-        className="z-[60] flex max-w-[calc(100vw-1rem)] flex-wrap items-center gap-0.5 rounded-xl border border-border bg-background p-1 shadow-lg sm:max-w-none sm:flex-nowrap"
+        className={
+          menuMode === "handle"
+            ? "z-[60] flex animate-in rounded-full border border-border bg-background p-0.5 shadow-md duration-150 fade-in-0 zoom-in-90"
+            : "z-[60] flex max-w-[calc(100vw-1rem)] flex-wrap items-center gap-0.5 rounded-xl border border-border bg-background p-1 shadow-lg sm:max-w-none sm:flex-nowrap"
+        }
         onMouseDown={(event) => {
           // Keep the editor selection when clicking buttons, but let the
           // link field take focus.
@@ -619,6 +649,20 @@ export function EditorBubbleMenu({
               </Button>
             </MenuTooltip>
           </>
+        ) : null}
+
+        {menuMode === "handle" ? (
+          <MenuTooltip label="Format">
+            <Button
+              size="icon-sm"
+              variant="ghost"
+              className="size-7 rounded-full"
+              onClick={() => setFormatExpanded(true)}
+              aria-label="Show formatting"
+            >
+              <HugeiconsIcon icon={TextFontIcon} size={15} strokeWidth={2} />
+            </Button>
+          </MenuTooltip>
         ) : null}
 
         {menuMode === "format" ? (

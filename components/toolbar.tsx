@@ -57,7 +57,7 @@ const HELP_SHORTCUTS = [
 const HELP_FEATURES = [
   "Every doc autosaves in this browser as you type.",
   "Paste Markdown to turn it into rich text.",
-  "Select text for inline formatting, links, and copy-as-Markdown.",
+  "Select text, then click the small Aa button for formatting, links, and copy-as-Markdown.",
   "A doc's tab is named after its first line.",
 ];
 
