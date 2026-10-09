@@ -521,7 +521,7 @@ export function EditorBubbleMenu({
         options={bubbleMenuOptions}
         className={
           menuMode === "handle"
-            ? "z-[60] flex animate-in items-center gap-0.5 rounded-full border border-border bg-background p-0.5 shadow-md duration-150 fade-in-0 zoom-in-90"
+            ? "z-[60] flex items-center gap-0.5 rounded-full border border-border bg-background p-0.5 shadow-md"
             : "z-[60] flex max-w-[calc(100vw-1rem)] flex-wrap items-center gap-0.5 rounded-xl border border-border bg-background p-1 shadow-lg sm:max-w-none sm:flex-nowrap"
         }
         onMouseDown={(event) => {
