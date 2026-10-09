@@ -153,7 +153,7 @@ export function Toolbar() {
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between px-4 py-3"
+      className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between bg-background px-4 py-3"
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
     >
