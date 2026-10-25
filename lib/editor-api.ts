@@ -1,4 +1,7 @@
-import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
+import {
+  DOMParser as ProseMirrorDOMParser,
+  type Node as ProseMirrorNode,
+} from "@tiptap/pm/model";
 import {
   addAlternative,
   inlineToText,
@@ -7,12 +10,12 @@ import {
   type AlternativeResult,
 } from "./alternatives";
 import { DOC_LOADED_EVENT, docLabel, useEditorStore } from "./editor-store";
-import { htmlToMarkdown } from "./markdown";
+import { htmlToMarkdown, markdownToHtml } from "./markdown";
 
 /*
  * A small hook on `window.minimalEditor` so an AI driving the browser can
- * read the open doc and suggest alternatives, without the app calling any
- * AI service itself. Documented in README.md.
+ * read the open doc, suggest alternatives and draft new paragraphs, without
+ * the app calling any AI service itself. Documented in README.md.
  */
 
 interface Suggestion {
@@ -63,6 +66,35 @@ function findText(doc: ProseMirrorNode, needle: string, occurrence: number) {
   return { range: found as { from: number; to: number } | null, count };
 }
 
+interface Insertion {
+  /** Markdown for one or more new blocks (paragraphs, headings, lists). */
+  markdown: string;
+  /** Exact text from the paragraph to put it after (or `before`). Neither: end of the doc. */
+  after?: string;
+  before?: string;
+}
+
+function insertBlocks(input: Insertion): AlternativeResult | { ok: true } {
+  const editor = getEditor();
+  if (!input?.markdown?.trim()) return { ok: false, error: "`markdown` is required." };
+
+  const { doc, schema } = editor.state;
+  let pos = doc.content.size;
+  const anchor = input.after ?? input.before;
+  if (anchor) {
+    const { range } = findText(doc, anchor, 1);
+    if (!range) return { ok: false, error: "That text isn't in the doc. Copy it exactly from text()." };
+    const $at = doc.resolve(range.from);
+    pos = input.after ? $at.after(1) : $at.before(1);
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = markdownToHtml(input.markdown);
+  const blocks = ProseMirrorDOMParser.fromSchema(schema).parse(wrapper).content;
+  editor.view.dispatch(editor.state.tr.insert(pos, blocks).scrollIntoView());
+  return { ok: true };
+}
+
 function getEditor() {
   const { editor } = useEditorStore.getState();
   if (!editor || editor.isDestroyed) throw new Error("The editor isn't ready yet.");
@@ -108,6 +140,12 @@ Read
   text()            open doc as plain text, one paragraph per block. Copy find strings from here.
   read()            open doc as Markdown (shows whichever versions are on screen)
   list()            existing alternatives: [{ id, shown, versions: [original, ...], fromAi }]
+
+Draft
+  insert({ markdown, after? | before? })
+    Adds new paragraphs (Markdown, can be several) after or before the paragraph containing
+    the exact text given, or at the end. Only when the writer asked for drafted text.
+    To rewrite an existing paragraph, use suggest() with the whole paragraph as find instead.
 
 Suggest
   suggest([{ find, alternatives, show?, occurrence? }, ...])
@@ -175,6 +213,10 @@ const api = {
         return { ok: false, error: String(error) };
       }
     });
+  },
+  /** Add new paragraphs from Markdown, after/before a paragraph or at the end. */
+  insert(input: Insertion) {
+    return insertBlocks(input);
   },
   /** Alternatives in the open doc. Version 0 is the original. */
   list() {

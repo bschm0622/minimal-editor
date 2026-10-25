@@ -73,6 +73,9 @@ minimalEditor.suggest([
   { find: "very good", alternatives: ["great"], show: "original", occurrence: 2 },
 ])
 // → [{ ok: true, id, matches }, { ok: false, error, matches }, ...]
+
+minimalEditor.insert({ markdown: "A new paragraph.", after: "End of the paragraph before." })
+// → { ok: true } — new paragraphs after (or `before`) the one containing that text, or at the end
 ```
 
 - `find` is exact plain text within one paragraph. Include the trailing space
