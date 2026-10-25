@@ -7,6 +7,7 @@ import {
   scheduleSave,
   useEditorStore,
 } from "@/lib/editor-store";
+import { installEditorApi } from "@/lib/editor-api";
 import { EditorSurface } from "./editor-surface";
 
 export function Editor() {
@@ -20,6 +21,10 @@ export function Editor() {
         setEditor: state.setEditor,
       }))
     );
+
+  useEffect(() => {
+    installEditorApi();
+  }, []);
 
   // Don't lose the last few keystrokes when the tab is closed or hidden.
   useEffect(() => {

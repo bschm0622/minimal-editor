@@ -350,3 +350,44 @@
   padding: 0;
 }
 
+
+/* Alternatives: text with other versions */
+.tiptap .alt,
+.tiptap .alt-gap {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 2px;
+  text-decoration-color: color-mix(in oklab, var(--foreground) 40%, transparent);
+  text-underline-offset: 0.25em;
+  text-decoration-skip-ink: none;
+}
+
+/* A suggested version is on screen, not the original. */
+.tiptap .alt[data-shown="variant"] {
+  text-decoration-color: var(--link);
+}
+
+.tiptap .alt-current,
+.tiptap .alt-current .alt {
+  background: color-mix(in oklab, var(--link) 14%, transparent);
+}
+
+/* Removed text stays readable, but only just. It isn't part of the doc's text. */
+.tiptap .alt-gap {
+  text-decoration: none;
+}
+
+.tiptap .alt-gap::before {
+  content: attr(data-removed-text);
+  opacity: 0.15;
+}
+
+.tiptap .alt-gap.alt-current::before {
+  opacity: 0.3;
+}
+
+/* While the versions panel is open, the rest of the doc steps back. */
+.alt-panel-open .tiptap:has(.alt-block) > :not(.alt-block) {
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}

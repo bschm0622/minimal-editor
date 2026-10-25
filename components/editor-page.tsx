@@ -1,7 +1,9 @@
 "use client";
 
 import { useLayoutEffect } from "react";
+import { useAlternativesUI } from "@/lib/alternatives";
 import { useEditorStore } from "@/lib/editor-store";
+import { AlternativesPanel } from "@/components/alternatives-panel";
 import { Editor } from "@/components/editor";
 import { Toolbar } from "@/components/toolbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +12,7 @@ export function EditorPage() {
   const editor = useEditorStore((state) => state.editor);
   const hydrated = useEditorStore((state) => state.hydrated);
   const hydrate = useEditorStore((state) => state.hydrate);
+  const panelOpen = useAlternativesUI((state) => state.panelOpen);
 
   useLayoutEffect(() => {
     const previousScrollRestoration = history.scrollRestoration;
@@ -59,9 +62,12 @@ export function EditorPage() {
     <TooltipProvider>
       <div className="flex min-h-screen flex-col bg-background">
         <Toolbar />
-        <main className="flex flex-1 flex-col pt-12">
+        <main
+          className={`flex flex-1 flex-col pt-12 ${panelOpen ? "alt-panel-open lg:pr-72" : ""}`}
+        >
           <Editor />
         </main>
+        <AlternativesPanel />
       </div>
     </TooltipProvider>
   );

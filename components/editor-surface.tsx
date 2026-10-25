@@ -21,6 +21,7 @@ import {
 } from "@tiptap/pm/model";
 import { EditorState, TextSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
+import { Code } from "@tiptap/extension-code";
 import { Link } from "@tiptap/extension-link";
 import { Placeholder } from "@tiptap/extensions/placeholder";
 import { Focus } from "@tiptap/extensions/focus";
@@ -32,6 +33,7 @@ import TaskItem from "@tiptap/extension-task-item";
 import TaskList from "@tiptap/extension-task-list";
 import { findTable, TableMap } from "prosemirror-tables";
 import {
+  DOC_LOADED_EVENT,
   docSessions,
   readDocContent,
   type EditorFont,
@@ -44,6 +46,7 @@ import {
 } from "@/lib/markdown";
 import { useEditorKeyboardShortcuts } from "@/lib/use-editor-keyboard-shortcuts";
 import { cn } from "@/lib/utils";
+import { AlternativeGap, AlternativeMark } from "@/lib/alternatives";
 import { EditorBubbleMenu } from "./editor-bubble-menu";
 import { SlashCommands } from "./slash-command";
 
@@ -136,7 +139,11 @@ export function EditorSurface({
       StarterKit.configure({
         gapcursor: false,
         link: false,
+        code: false,
       }),
+      // Inline code shuts out every other mark by default, which would leave
+      // code inside an alternative without it. Let the alternative through.
+      Code.extend({ excludes: "bold italic strike underline link code" }),
       // Autolink makes links inclusive by default, so typing at the end of
       // a link would grow it. Links should stop where they end.
       Link.extend({ inclusive: () => false }).configure({
@@ -173,6 +180,8 @@ export function EditorSurface({
       }),
       TableEditingShortcuts,
       SlashCommands,
+      AlternativeMark,
+      AlternativeGap,
     ],
     content: "",
     editorProps: {
@@ -285,6 +294,7 @@ export function EditorSurface({
     }
 
     loadedDocRef.current = { id: docId, revision: docRevision };
+    window.dispatchEvent(new CustomEvent(DOC_LOADED_EVENT, { detail: docId }));
 
     if (loaded?.id === docId) return;
 

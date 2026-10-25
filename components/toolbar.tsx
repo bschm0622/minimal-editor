@@ -52,6 +52,8 @@ const HELP_SHORTCUTS = [
   { key: "Alt + W", description: "Close doc" },
   { key: "Alt + [ / ]", description: "Previous / next doc" },
   { key: "Alt + 1–9", description: "Jump to a doc" },
+  { key: "Alt + ↑ / ↓", description: "Switch between alternatives" },
+  { key: "Alt + Enter", description: "Show or hide an alternative's versions" },
 ];
 
 const HELP_FEATURES = [
@@ -59,6 +61,7 @@ const HELP_FEATURES = [
   "Paste Markdown to turn it into rich text.",
   "Select text, then click the small Aa button for formatting, links, and copy-as-Markdown.",
   "A doc's tab is named after its first line.",
+  "Text with a dotted underline has other versions. Select text and use the bubble to add an alternative or dim it.",
 ];
 
 const wordFormatter = new Intl.NumberFormat();

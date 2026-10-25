@@ -37,6 +37,8 @@ import {
   DeleteRowIcon,
   Delete01Icon,
   TableRowsSplitIcon,
+  Layers01Icon,
+  ViewOffIcon,
 } from "@hugeicons/core-free-icons";
 import { Toggle } from "@/components/ui/toggle";
 import {
@@ -53,6 +55,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { copyEditorSelectionAsMarkdown } from "@/lib/editor-copy-actions";
+import {
+  canAddAlternative,
+  dimSelection,
+  startAlternativeFromSelection,
+} from "@/lib/alternatives";
 
 function normalizeLinkUrl(value: string) {
   const trimmed = value.trim();
@@ -244,6 +251,13 @@ export function EditorBubbleMenu({
       isLink: currentEditor?.isActive("link") ?? false,
       isTable: currentEditor?.isActive("table") ?? false,
       isSelectionEmpty: currentEditor?.state.selection.empty ?? true,
+      canAddAlternative: currentEditor
+        ? canAddAlternative(
+            currentEditor.state,
+            currentEditor.state.selection.from,
+            currentEditor.state.selection.to
+          )
+        : false,
       canAddColumnBefore: currentEditor
         ? currentEditor.can().addColumnBefore()
         : false,
@@ -687,6 +701,32 @@ export function EditorBubbleMenu({
                 />
               </Button>
             </MenuTooltip>
+            {editorState?.canAddAlternative ? (
+              <MenuTooltip label="Add alternative">
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="size-7 rounded-full"
+                  onClick={() => startAlternativeFromSelection(editor)}
+                  aria-label="Add alternative"
+                >
+                  <HugeiconsIcon icon={Layers01Icon} size={15} strokeWidth={2} />
+                </Button>
+              </MenuTooltip>
+            ) : null}
+            {editorState?.canAddAlternative ? (
+              <MenuTooltip label="Dim">
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="size-7 rounded-full"
+                  onClick={() => dimSelection(editor)}
+                  aria-label="Dim"
+                >
+                  <HugeiconsIcon icon={ViewOffIcon} size={15} strokeWidth={2} />
+                </Button>
+              </MenuTooltip>
+            ) : null}
           </>
         ) : null}
 

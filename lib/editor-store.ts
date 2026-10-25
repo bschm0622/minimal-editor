@@ -82,6 +82,9 @@ function persistDocs(docs: Doc[]) {
   writeStorage(DOCS_KEY, JSON.stringify(docs));
 }
 
+/** Fired on window (detail: doc id) once a doc is in the editor. */
+export const DOC_LOADED_EVENT = "minimal-editor:doc-loaded";
+
 export function readDocContent(id: string) {
   return readStorage(DOC_CONTENT_PREFIX + id) ?? "";
 }
@@ -93,6 +96,18 @@ export const docSessions = new Map<
 >();
 
 let undoCloseTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const beforeDocChangeListeners = new Set<() => void>();
+
+/** Runs `listener` while the current doc is still active, right before another one opens. */
+export function onBeforeDocChange(listener: () => void) {
+  beforeDocChangeListeners.add(listener);
+  return () => beforeDocChangeListeners.delete(listener);
+}
+
+function beforeDocChange() {
+  beforeDocChangeListeners.forEach((listener) => listener());
+}
 
 export const useEditorStore = create<EditorState>((set, get) => ({
   editor: null,
@@ -107,6 +122,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setEditor: (editor) => set({ editor }),
 
   newDoc: () => {
+    beforeDocChange();
     flushPendingSave();
     const doc = emptyDoc();
     const { docs, activeId } = get();
@@ -120,6 +136,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   switchDoc: (id) => {
     if (id === get().activeId || !get().docs.some((d) => d.id === id)) return;
+    beforeDocChange();
     flushPendingSave();
     writeStorage(ACTIVE_DOC_KEY, id);
     set({ activeId: id });
@@ -133,6 +150,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   closeDoc: (id) => {
+    if (id === get().activeId) beforeDocChange();
     flushPendingSave();
     const { docs, activeId } = get();
     const index = docs.findIndex((d) => d.id === id);
@@ -169,6 +187,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   undoClose: () => {
     const { lastClosed, docs } = get();
     if (!lastClosed) return;
+    beforeDocChange();
     flushPendingSave();
 
     const { doc, index, content } = lastClosed;
