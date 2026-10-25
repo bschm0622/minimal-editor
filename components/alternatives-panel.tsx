@@ -285,6 +285,18 @@ export function AlternativesPanel() {
   const { current, all, count } = useAlternativesState(editor, panelOpen);
   const currentId = current?.id ?? null;
 
+  // Esc closes the panel wherever focus is; lines and the editor handle it first.
+  useEffect(() => {
+    if (!panelOpen || !editor) return;
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      closePanel();
+      editor.commands.focus(null, { scrollIntoView: false });
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [panelOpen, editor, closePanel]);
+
   // A blank line added to one alternative goes once you move to another.
   useEffect(() => {
     const { fresh } = useAlternativesUI.getState();

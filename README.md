@@ -30,7 +30,8 @@ autosaves locally as you type, and you can keep several docs open as tabs.
 - `Alt + [` / `Alt + ]` previous / next doc
 - `Alt + 1–9` jump to a doc (`9` is the last one)
 - `Alt + ↑` / `Alt + ↓` switch between alternatives (cursor in the text)
-- `Alt + Enter` show or hide an alternative's versions
+- `Alt + Enter` add an alternative to the selected text, or show or hide an alternative's versions
+- `Alt + D` dim or undim the selected text
 
 ## Alternatives
 
@@ -45,8 +46,10 @@ line deletes it, `Cmd/Ctrl + Enter` keeps that version, and `Esc` or
 `Alt + Enter` goes back to the text. With the cursor outside any alternative,
 the panel lists them all.
 
-To add one yourself, select text and use the bubble: the layers button adds an
-alternative, the eye button dims the text. Dimmed text is a version that
+To add one yourself, select text and press `Alt + Enter` (or the layers button
+in the bubble), then type the new version. `Alt + D` (or the eye button) dims the selected
+text; click dimmed text and press it again, or use the Undim button, to bring
+it back. Dimmed text is a version that
 removes it: it stays faintly visible but isn't part of the doc (word count,
 copy, Markdown).
 

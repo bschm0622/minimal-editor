@@ -386,6 +386,12 @@
   opacity: 0.3;
 }
 
+.tiptap .alt-gap.ProseMirror-selectednode {
+  outline: none;
+  background: color-mix(in oklab, var(--link) 14%, transparent);
+  border-radius: 0.15em;
+}
+
 /* While the versions panel is open, the rest of the doc steps back. */
 .alt-panel-open .tiptap:has(.alt-block) > :not(.alt-block) {
   opacity: 0.3;

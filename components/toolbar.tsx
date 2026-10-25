@@ -53,7 +53,8 @@ const HELP_SHORTCUTS = [
   { key: "Alt + [ / ]", description: "Previous / next doc" },
   { key: "Alt + 1–9", description: "Jump to a doc" },
   { key: "Alt + ↑ / ↓", description: "Switch between alternatives" },
-  { key: "Alt + Enter", description: "Show or hide an alternative's versions" },
+  { key: "Alt + Enter", description: "Add an alternative (with text selected), or show its versions" },
+  { key: "Alt + D", description: "Dim or undim the selected text" },
 ];
 
 const HELP_FEATURES = [

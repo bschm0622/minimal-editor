@@ -694,9 +694,19 @@ export const AlternativeMark = Mark.create({
           ui.closePanel();
           return true;
         }
-        const range = alternativeAt(this.editor.state);
-        if (!range) return false;
-        ui.openPanel({ id: range.id, index: range.active });
+        // With text selected: make it an alternative and type the new version.
+        const { state } = this.editor;
+        const { from, to, empty } = state.selection;
+        if (!empty && canAddAlternative(state, from, to)) {
+          return startAlternativeFromSelection(this.editor).ok;
+        }
+        const id = alternativeInSelection(state);
+        return id ? showVersions(this.editor, id) : false;
+      },
+      // ProseMirror's Mac keymap binds Option+D to delete; here it dims instead,
+      // and never deletes.
+      "Alt-d": () => {
+        toggleDim(this.editor);
         return true;
       },
       Escape: () => {
@@ -717,7 +727,8 @@ export const AlternativeGap = Node.create({
   group: "inline",
   inline: true,
   atom: true,
-  selectable: false,
+  // Clicking dimmed text selects it, so the bubble can offer to undim it.
+  selectable: true,
   draggable: false,
 
   addAttributes() {
@@ -803,29 +814,77 @@ export function pruneFreshVersion(): { id: string; index: number } | null {
 // Tidy up before another doc opens, while edits still save to this one.
 onBeforeDocChange(() => useAlternativesUI.getState().closePanel());
 
-function selectionContent(editor: Editor) {
-  const { from, to } = editor.state.selection;
-  const $from = editor.state.doc.resolve(from);
-  const start = $from.start();
-  return inlineToJSON(
-    $from.parent.content.cut(from - start, to - start),
-    editor.schema.marks[MARK_NAME]
-  );
-}
-
-/** Makes the selection an alternative with a second, editable copy, and opens it in the panel. */
+/** Makes the selection an alternative and opens a blank line in the panel for the new version. */
 export function startAlternativeFromSelection(editor: Editor) {
   const { from, to } = editor.state.selection;
-  const result = addAlternative(editor, { from, to }, [selectionContent(editor)], {
-    allowDuplicate: true,
-    select: true,
-  });
+  // The blank version stays out of sight until it has text, and is dropped if it never does.
+  const result = addAlternative(editor, { from, to }, [[]], { show: "original", select: true });
   if (result.ok) {
     const ui = useAlternativesUI.getState();
     ui.setFresh({ id: result.id, index: 1 });
-    ui.openPanel({ id: result.id, index: 1, caret: "all" });
+    ui.openPanel({ id: result.id, index: 1 });
   }
   return result;
+}
+
+/** The first alternative the selection touches, or the one the cursor is in. */
+export function alternativeInSelection(state: EditorState) {
+  const { from, to } = state.selection;
+  let id: string | null = null;
+  state.doc.nodesBetween(from, to, (node) => {
+    id ??= attrsOf(node)?.id ?? null;
+  });
+  return id ?? alternativeAt(state)?.id ?? null;
+}
+
+/** Opens the panel on an alternative, moving the cursor into it so the panel follows. */
+export function showVersions(editor: Editor, id: string) {
+  const range = collectAlternatives(editor.state.doc).find((r) => r.id === id);
+  if (!range) return false;
+  editor.commands.setTextSelection(range.to);
+  useAlternativesUI.getState().openPanel({ id, index: range.active });
+  return true;
+}
+
+/** Ids of dimmed alternatives (removals on screen) inside the selection. */
+export function dimmedInSelection(state: EditorState) {
+  const { from, to } = state.selection;
+  const ids: string[] = [];
+  state.doc.nodesBetween(from, to, (node) => {
+    if (node.type.name === GAP_NAME) ids.push(node.attrs.id);
+  });
+  return ids;
+}
+
+/** Alt+D: undims dimmed text in or at the selection, otherwise dims the selection. */
+export function toggleDim(editor: Editor) {
+  const { state } = editor;
+  const dimmed = dimmedInSelection(state);
+  const at = alternativeAt(state);
+  if (!dimmed.length && at?.gap) dimmed.push(at.id);
+  if (dimmed.length) {
+    undim(editor, dimmed);
+    return true;
+  }
+  const { from, to, empty } = state.selection;
+  if (empty || !canAddAlternative(state, from, to)) return false;
+  return dimSelection(editor).ok;
+}
+
+/** Brings dimmed text back: drops the removal versions, keeping any other rewrites. */
+export function undim(editor: Editor, ids: string[]) {
+  for (const id of ids) {
+    updateAlternative(editor, id, (attrs) => {
+      const keep = attrs.variants.map((v, i) => i === 0 || v.length > 0);
+      const variants = attrs.variants.filter((_, i) => keep[i]);
+      return {
+        ...attrs,
+        variants,
+        ai: attrs.ai.filter((_, i) => keep[i]),
+        active: Math.max(0, variants.indexOf(attrs.variants[attrs.active])),
+      };
+    });
+  }
 }
 
 /** Dims the selection: an alternative whose shown version removes it. */

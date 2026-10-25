@@ -39,6 +39,8 @@ import {
   TableRowsSplitIcon,
   Layers01Icon,
   ViewOffIcon,
+  EyeIcon,
+  LeftToRightListBulletIcon,
 } from "@hugeicons/core-free-icons";
 import { Toggle } from "@/components/ui/toggle";
 import {
@@ -56,9 +58,13 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { copyEditorSelectionAsMarkdown } from "@/lib/editor-copy-actions";
 import {
+  alternativeInSelection,
   canAddAlternative,
+  dimmedInSelection,
   dimSelection,
+  showVersions,
   startAlternativeFromSelection,
+  undim,
 } from "@/lib/alternatives";
 
 function normalizeLinkUrl(value: string) {
@@ -251,6 +257,12 @@ export function EditorBubbleMenu({
       isLink: currentEditor?.isActive("link") ?? false,
       isTable: currentEditor?.isActive("table") ?? false,
       isSelectionEmpty: currentEditor?.state.selection.empty ?? true,
+      selectedAlternative: currentEditor
+        ? alternativeInSelection(currentEditor.state)
+        : null,
+      hasDimmed: currentEditor
+        ? dimmedInSelection(currentEditor.state).length > 0
+        : false,
       canAddAlternative: currentEditor
         ? canAddAlternative(
             currentEditor.state,
@@ -702,7 +714,7 @@ export function EditorBubbleMenu({
               </Button>
             </MenuTooltip>
             {editorState?.canAddAlternative ? (
-              <MenuTooltip label="Add alternative">
+              <MenuTooltip label="Add alternative" shortcut="⌥↵">
                 <Button
                   size="icon-sm"
                   variant="ghost"
@@ -715,7 +727,7 @@ export function EditorBubbleMenu({
               </MenuTooltip>
             ) : null}
             {editorState?.canAddAlternative ? (
-              <MenuTooltip label="Dim">
+              <MenuTooltip label="Dim" shortcut="⌥D">
                 <Button
                   size="icon-sm"
                   variant="ghost"
@@ -724,6 +736,32 @@ export function EditorBubbleMenu({
                   aria-label="Dim"
                 >
                   <HugeiconsIcon icon={ViewOffIcon} size={15} strokeWidth={2} />
+                </Button>
+              </MenuTooltip>
+            ) : null}
+            {editorState?.selectedAlternative ? (
+              <MenuTooltip label="Show versions" shortcut="⌥↵">
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="size-7 rounded-full"
+                  onClick={() => showVersions(editor, editorState.selectedAlternative!)}
+                  aria-label="Show versions"
+                >
+                  <HugeiconsIcon icon={LeftToRightListBulletIcon} size={15} strokeWidth={2} />
+                </Button>
+              </MenuTooltip>
+            ) : null}
+            {editorState?.hasDimmed ? (
+              <MenuTooltip label="Undim" shortcut="⌥D">
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  className="size-7 rounded-full"
+                  onClick={() => undim(editor, dimmedInSelection(editor.state))}
+                  aria-label="Undim"
+                >
+                  <HugeiconsIcon icon={EyeIcon} size={15} strokeWidth={2} />
                 </Button>
               </MenuTooltip>
             ) : null}
