@@ -13,7 +13,7 @@ import { findParentNodeClosestToPos, type Editor } from "@tiptap/core";
 import type { EditorState, Selection } from "@tiptap/pm/state";
 import { useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 import {
   TextBoldIcon,
   TextItalicIcon,
@@ -66,7 +66,7 @@ import {
 } from "@/lib/alternatives";
 import { showVersions, startAlternativeFromSelection } from "@/lib/alternatives-ui";
 import { announce } from "@/lib/announce";
-import { ALT_KEY, MOD_KEY } from "@/lib/utils";
+import { ALT_KEY, cn, MOD_KEY } from "@/lib/utils";
 
 function normalizeLinkUrl(value: string) {
   const trimmed = value.trim();
@@ -170,6 +170,34 @@ const BUBBLE_MENU_POSITION_OPTIONS: BubbleMenuOptions = {
   },
 };
 type TableButtonPosition = { top: number; right: number };
+
+function TableMenuButton({
+  icon,
+  destructive,
+  children,
+  ...props
+}: {
+  icon: IconSvgElement;
+  destructive?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: string;
+}) {
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className={cn(
+        "justify-start rounded-xl px-2.5 font-normal",
+        destructive && "text-destructive hover:text-destructive"
+      )}
+      {...props}
+    >
+      <HugeiconsIcon icon={icon} size={16} strokeWidth={1.75} />
+      {children}
+    </Button>
+  );
+}
 
 function getActiveTableWrapper(editor: Editor) {
   const table = findParentNodeClosestToPos(
@@ -546,8 +574,8 @@ export function EditorBubbleMenu({
         tabIndex={-1}
         className={
           menuMode === "handle"
-            ? "z-[60] flex items-center gap-0.5 rounded-full border border-border bg-background p-0.5 shadow-md"
-            : "z-[60] flex max-w-[calc(100vw-1rem)] flex-wrap items-center gap-0.5 rounded-xl border border-border bg-background p-1 shadow-lg sm:max-w-none sm:flex-nowrap"
+            ? "z-[60] flex items-center gap-0.5 rounded-full border border-border bg-popover p-0.5 shadow-lg"
+            : "z-[60] flex max-w-[calc(100vw-1rem)] flex-wrap items-center gap-0.5 rounded-2xl border border-border bg-popover p-1 shadow-lg sm:max-w-none sm:flex-nowrap sm:rounded-full"
         }
         onMouseDown={(event) => {
           // Keep the editor selection when clicking buttons, but let the
@@ -624,7 +652,7 @@ export function EditorBubbleMenu({
                 href={activeLinkUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex h-8 max-w-56 items-center gap-1.5 rounded-lg px-2.5 text-sm text-foreground transition-colors hover:bg-accent sm:max-w-72"
+                className="flex h-8 max-w-56 items-center gap-1.5 rounded-full px-3 text-sm text-foreground transition-colors outline-none hover:bg-muted focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:max-w-72"
               >
                 <span className="truncate">{activeLinkUrl}</span>
                 <HugeiconsIcon
@@ -887,7 +915,7 @@ export function EditorBubbleMenu({
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 gap-1.5 rounded-full border-border/70 bg-background/92 px-3 text-xs text-foreground shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/78"
+                  className="gap-1.5 bg-popover px-3 text-xs shadow-sm"
                   aria-label="Table options"
                 />
               }
@@ -896,29 +924,69 @@ export function EditorBubbleMenu({
               Table
             </PopoverTrigger>
             <PopoverContent
-              className="w-64 gap-2 p-2.5"
+              className="w-72 gap-1 p-1"
               side="top"
               align="end"
-              sideOffset={10}
+              sideOffset={8}
             >
-              <div className="px-1 pt-0.5 text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                Structure
-              </div>
               <div className="grid grid-cols-2 gap-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 justify-start rounded-xl"
+                <TableMenuButton
+                  icon={InsertRowUpIcon}
+                  disabled={!editorState?.canAddRowBefore}
+                  onClick={() => runTableCommand((chain) => chain.addRowBefore())}
+                >
+                  Row above
+                </TableMenuButton>
+                <TableMenuButton
+                  icon={InsertRowDownIcon}
+                  disabled={!editorState?.canAddRowAfter}
+                  onClick={() => runTableCommand((chain) => chain.addRowAfter())}
+                >
+                  Row below
+                </TableMenuButton>
+                <TableMenuButton
+                  icon={InsertColumnLeftIcon}
+                  disabled={!editorState?.canAddColumnBefore}
+                  onClick={() => runTableCommand((chain) => chain.addColumnBefore())}
+                >
+                  Column left
+                </TableMenuButton>
+                <TableMenuButton
+                  icon={InsertColumnRightIcon}
+                  disabled={!editorState?.canAddColumnAfter}
+                  onClick={() => runTableCommand((chain) => chain.addColumnAfter())}
+                >
+                  Column right
+                </TableMenuButton>
+                <TableMenuButton
+                  icon={TableRowsSplitIcon}
                   disabled={!editorState?.canToggleHeaderRow}
                   onClick={() => runTableCommand((chain) => chain.toggleHeaderRow())}
                 >
-                  <HugeiconsIcon icon={TableRowsSplitIcon} size={15} strokeWidth={1.8} />
                   Header row
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 justify-start rounded-xl"
+                </TableMenuButton>
+              </div>
+              <Separator className="my-0.5" />
+              <div className="grid grid-cols-2 gap-1">
+                <TableMenuButton
+                  icon={DeleteRowIcon}
+                  destructive
+                  disabled={!editorState?.canDeleteRow}
+                  onClick={() => runTableCommand((chain) => chain.deleteRow())}
+                >
+                  Delete row
+                </TableMenuButton>
+                <TableMenuButton
+                  icon={DeleteColumnIcon}
+                  destructive
+                  disabled={!editorState?.canDeleteColumn}
+                  onClick={() => runTableCommand((chain) => chain.deleteColumn())}
+                >
+                  Delete column
+                </TableMenuButton>
+                <TableMenuButton
+                  icon={Delete01Icon}
+                  destructive
                   disabled={!editorState?.canDeleteTable}
                   onClick={() =>
                     runTableCommand((chain) => chain.deleteTable(), {
@@ -926,79 +994,8 @@ export function EditorBubbleMenu({
                     })
                   }
                 >
-                  <HugeiconsIcon icon={Delete01Icon} size={15} strokeWidth={1.8} />
-                  Clear table
-                </Button>
-              </div>
-              <div className="px-1 pt-1 text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                Insert
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 justify-start rounded-xl"
-                  disabled={!editorState?.canAddRowBefore}
-                  onClick={() => runTableCommand((chain) => chain.addRowBefore())}
-                >
-                  <HugeiconsIcon icon={InsertRowUpIcon} size={15} strokeWidth={1.8} />
-                  Row above
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 justify-start rounded-xl"
-                  disabled={!editorState?.canAddRowAfter}
-                  onClick={() => runTableCommand((chain) => chain.addRowAfter())}
-                >
-                  <HugeiconsIcon icon={InsertRowDownIcon} size={15} strokeWidth={1.8} />
-                  Row below
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 justify-start rounded-xl"
-                  disabled={!editorState?.canAddColumnBefore}
-                  onClick={() => runTableCommand((chain) => chain.addColumnBefore())}
-                >
-                  <HugeiconsIcon icon={InsertColumnLeftIcon} size={15} strokeWidth={1.8} />
-                  Col left
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 justify-start rounded-xl"
-                  disabled={!editorState?.canAddColumnAfter}
-                  onClick={() => runTableCommand((chain) => chain.addColumnAfter())}
-                >
-                  <HugeiconsIcon icon={InsertColumnRightIcon} size={15} strokeWidth={1.8} />
-                  Col right
-                </Button>
-              </div>
-              <div className="px-1 pt-1 text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                Delete
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 justify-start rounded-xl text-destructive hover:text-destructive"
-                  disabled={!editorState?.canDeleteRow}
-                  onClick={() => runTableCommand((chain) => chain.deleteRow())}
-                >
-                  <HugeiconsIcon icon={DeleteRowIcon} size={15} strokeWidth={1.8} />
-                  Delete row
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 justify-start rounded-xl text-destructive hover:text-destructive"
-                  disabled={!editorState?.canDeleteColumn}
-                  onClick={() => runTableCommand((chain) => chain.deleteColumn())}
-                >
-                  <HugeiconsIcon icon={DeleteColumnIcon} size={15} strokeWidth={1.8} />
-                  Delete col
-                </Button>
+                  Delete table
+                </TableMenuButton>
               </div>
             </PopoverContent>
           </Popover>

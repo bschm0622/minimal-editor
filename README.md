@@ -90,8 +90,8 @@ alternatives, which you review like any others.
 The connection only reaches the editor, and only while it's on. The helper
 ([`mcp/`](mcp)) runs on your computer, accepts connections only from the
 editor's own address, and passes each request to the editor tab, which does
-the work. Your docs never go anywhere except to your agent. Click Disconnect
-(bottom left) or close the tab to end it.
+the work. Your docs never go anywhere except to your agent. Click the robot
+button again or close the tab to end it.
 
 It works in desktop Chrome, Edge and Firefox. Safari doesn't let a website
 connect to an app on your computer. If you host your own copy, add its address

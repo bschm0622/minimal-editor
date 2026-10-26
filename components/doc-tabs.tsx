@@ -42,7 +42,7 @@ export function DocTabs({ dimmed }: { dimmed: boolean }) {
             key={doc.id}
             ref={active ? activeTabRef : undefined}
             className={cn(
-              "group/tab flex max-w-48 shrink-0 items-center rounded-lg text-sm transition-colors",
+              "group/tab flex max-w-48 shrink-0 items-center rounded-full text-sm transition-colors has-[>button:first-child:focus-visible]:ring-[3px] has-[>button:first-child:focus-visible]:ring-ring/50",
               active
                 ? "bg-muted text-foreground"
                 : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
@@ -57,7 +57,7 @@ export function DocTabs({ dimmed }: { dimmed: boolean }) {
               title={label}
               onClick={() => switchDoc(doc.id)}
               className={cn(
-                "truncate py-1 pr-1 pl-2.5 outline-none",
+                "truncate py-1 pr-1 pl-3 outline-none",
                 !doc.title && "italic"
               )}
             >
@@ -68,7 +68,7 @@ export function DocTabs({ dimmed }: { dimmed: boolean }) {
               aria-label={`Close ${label}`}
               onClick={() => closeDoc(doc.id)}
               className={cn(
-                "mr-1 flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-background/60 hover:text-foreground focus-visible:opacity-100",
+                "mr-1 flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-background/60 hover:text-foreground focus-visible:opacity-100 focus-visible:ring-[3px] focus-visible:ring-ring/50",
                 active ? "opacity-60" : "opacity-0 group-hover/tab:opacity-60"
               )}
             >

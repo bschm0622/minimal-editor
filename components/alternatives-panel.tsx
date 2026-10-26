@@ -22,7 +22,7 @@ import {
 import { pruneFreshVersion, useAlternativesUI } from "@/lib/alternatives-ui";
 import { announce } from "@/lib/announce";
 import { useEditorStore } from "@/lib/editor-store";
-import { cn, MOD_KEY } from "@/lib/utils";
+import { ALT_KEY, cn, MOD_KEY } from "@/lib/utils";
 
 const FONT_CLASS = {
   sans: "font-sans",
@@ -290,7 +290,7 @@ function QuietButton({ children, onClick }: { children: string; onClick: () => v
     <button
       type="button"
       onClick={onClick}
-      className="text-muted-foreground transition-colors hover:text-foreground"
+      className="font-medium text-muted-foreground transition-colors hover:text-foreground"
     >
       {children}
     </button>
@@ -352,12 +352,11 @@ export function AlternativesPanel() {
   return (
     <aside
       className={cn(
-        "fixed top-14 right-0 bottom-0 z-40 flex w-full flex-col border-l border-border bg-background px-5 pt-6 pb-4 text-sm sm:w-72",
-        FONT_CLASS[font]
+        "fixed top-14 right-0 bottom-0 z-40 flex w-full flex-col border-l border-border bg-background px-5 pt-6 pb-4 text-sm sm:w-72"
       )}
       aria-label="Alternatives"
     >
-      <div className="flex-1 overflow-y-auto">
+      <div className={cn("flex-1 overflow-y-auto", FONT_CLASS[font])}>
         {current ? (
           <ul key={current.id} className="flex flex-col gap-1">
             {current.versions.map((_, index) => (
@@ -384,7 +383,7 @@ export function AlternativesPanel() {
           </ul>
         ) : (
           <p className="leading-6 text-muted-foreground">
-            No alternatives yet. Select some text and use the bubble to add one.
+            No alternatives yet. Select text and press {ALT_KEY}↵ to add one.
           </p>
         )}
       </div>
@@ -411,7 +410,7 @@ export function AlternativesPanel() {
               </QuietButton>
             ) : null}
             <span className="ml-auto text-muted-foreground">
-              ↵ adds · {MOD_KEY}↵ keeps · esc closes
+              ↵ adds · {MOD_KEY}↵ keeps
             </span>
           </>
         ) : (
@@ -432,7 +431,7 @@ export function AlternativesPanel() {
                     backToText();
                   }}
                 >
-                  Restore all
+                  Use originals
                 </QuietButton>
               </>
             ) : null}

@@ -146,15 +146,6 @@ export function Toolbar() {
     if (editor) await copyDocAsMarkdown(editor);
   }, []);
 
-  const tooltipFontClassName =
-    font === "editorial"
-      ? "font-editorial"
-      : font === "classic"
-        ? "font-classic"
-        : font === "mono"
-          ? "font-mono"
-          : "font-sans";
-
   return (
     <header
       className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between bg-background px-4 py-3"
@@ -197,7 +188,7 @@ export function Toolbar() {
       </div>
 
       <div
-        className={`absolute right-4 top-1/2 flex items-center gap-1 rounded-xl border border-border bg-background/95 p-1.5 shadow-lg backdrop-blur-sm transition-all duration-200 sm:static sm:bg-background/80 sm:shadow-none ${
+        className={`absolute right-4 top-1/2 flex items-center gap-1 rounded-2xl border border-border bg-popover p-1 shadow-lg transition-all duration-200 sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none ${
           expanded
             ? "translate-y-[-50%] opacity-100 sm:translate-y-0"
             : "pointer-events-none translate-y-[-60%] opacity-0 sm:-translate-y-1"
@@ -216,13 +207,13 @@ export function Toolbar() {
                 onClick={togglePanel}
                 aria-label="Alternatives"
                 aria-pressed={panelOpen}
-                className={panelOpen ? "bg-accent" : ""}
+                className="aria-pressed:bg-muted aria-pressed:text-foreground"
               />
             }
           >
             <HugeiconsIcon icon={LeftToRightListBulletIcon} size={18} strokeWidth={1.5} />
           </TooltipTrigger>
-          <TooltipContent className={tooltipFontClassName}>
+          <TooltipContent>
             Alternatives <span className="opacity-60">{ALT_KEY}↵</span>
           </TooltipContent>
         </Tooltip>
@@ -240,7 +231,7 @@ export function Toolbar() {
           >
             <HugeiconsIcon icon={Add01Icon} size={18} strokeWidth={1.5} />
           </TooltipTrigger>
-          <TooltipContent className={tooltipFontClassName}>
+          <TooltipContent>
             New doc
           </TooltipContent>
         </Tooltip>
@@ -258,7 +249,7 @@ export function Toolbar() {
           >
             <HugeiconsIcon icon={Copy01Icon} size={18} strokeWidth={1.5} />
           </TooltipTrigger>
-          <TooltipContent className={tooltipFontClassName}>
+          <TooltipContent>
             Copy as Markdown
           </TooltipContent>
         </Tooltip>
@@ -286,16 +277,18 @@ export function Toolbar() {
                 </PopoverTrigger>
               }
             />
-            <TooltipContent className={tooltipFontClassName}>
+            <TooltipContent>
               Font
             </TooltipContent>
           </Tooltip>
-          <PopoverContent className="w-44 gap-0 p-1.5" side="bottom" align="end">
+          <PopoverContent className="w-44 gap-0 p-1" side="bottom" align="end">
             {FONT_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
+                type="button"
+                aria-pressed={font === opt.value}
                 onClick={() => setFont(opt.value)}
-                className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
+                className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-sm transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${
                   font === opt.value
                     ? "bg-accent text-accent-foreground"
                     : "text-foreground hover:bg-accent/50"
@@ -327,8 +320,9 @@ export function Toolbar() {
                   variant="ghost"
                   size="icon-sm"
                   onClick={toggleFocusMode}
-                  aria-label="Toggle focus mode"
-                  className={focusMode ? "bg-accent" : ""}
+                  aria-label="Focus mode"
+                  aria-pressed={focusMode}
+                  className="aria-pressed:bg-muted aria-pressed:text-foreground"
                 />
               }
             >
@@ -338,7 +332,7 @@ export function Toolbar() {
                 strokeWidth={1.5}
               />
             </TooltipTrigger>
-            <TooltipContent className={tooltipFontClassName}>
+            <TooltipContent>
               Focus mode
             </TooltipContent>
           </Tooltip>
@@ -350,7 +344,7 @@ export function Toolbar() {
                 variant="ghost"
                 size="icon-sm"
                 onClick={toggleTheme}
-                aria-label="Toggle theme"
+                aria-label={isDark ? "Light mode" : "Dark mode"}
               />
             }
           >
@@ -360,23 +354,12 @@ export function Toolbar() {
               strokeWidth={1.5}
             />
           </TooltipTrigger>
-          <TooltipContent className={tooltipFontClassName}>
+          <TooltipContent>
             {isDark ? "Light mode" : "Dark mode"}
           </TooltipContent>
         </Tooltip>
 
-        <HelpDialog tooltipClassName={tooltipFontClassName} />
-      </div>
-
-      <div
-        className={`pointer-events-none fixed right-3 z-60 rounded-full border border-border bg-background/95 px-3 py-1 text-xs text-muted-foreground shadow-sm backdrop-blur-sm transition-all duration-200 sm:right-4 ${
-          showCopyConfirmation
-            ? "translate-y-0 opacity-100"
-            : "-translate-y-2 opacity-0"
-        }`}
-        style={{ top: "max(0.75rem, env(safe-area-inset-top))" }}
-      >
-        Copied as Markdown
+        <HelpDialog />
       </div>
 
       <Tooltip>
@@ -389,7 +372,7 @@ export function Toolbar() {
               aria-label={AGENT_LABEL[agentStatus]}
               aria-pressed={agentStatus !== "off"}
               className={cn(
-                "relative ml-1 transition-all duration-200",
+                "relative ml-1 transition-opacity duration-200",
                 agentStatus === "connected"
                   ? "text-foreground"
                   : "text-muted-foreground",
@@ -412,34 +395,43 @@ export function Toolbar() {
             />
           ) : null}
         </TooltipTrigger>
-        <TooltipContent className={tooltipFontClassName}>
+        <TooltipContent>
           {AGENT_LABEL[agentStatus]}
         </TooltipContent>
       </Tooltip>
 
-      {saveFailed ? (
-        <div
-          role="alert"
-          className="fixed bottom-12 left-4 z-60 max-w-xs rounded-xl border border-destructive/40 bg-background px-3 py-2 text-sm text-destructive shadow-lg"
-        >
-          Not saved: this browser&apos;s storage is full. Download a backup from
-          Help, then close docs you don&apos;t need.
-        </div>
-      ) : null}
+      {/* Toasts stack at the bottom centre, so two at once never overlap. */}
+      <div className="pointer-events-none fixed bottom-4 left-1/2 z-60 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-col items-center gap-2 text-sm">
+        {saveFailed ? (
+          <div
+            role="alert"
+            className="pointer-events-auto max-w-sm rounded-2xl border border-destructive/40 bg-popover px-4 py-2.5 text-destructive shadow-lg"
+          >
+            Not saved: this browser&apos;s storage is full. Download a backup
+            from Help, then close docs you don&apos;t need.
+          </div>
+        ) : null}
 
-      {lastClosed ? (
-        <div
-          role="status"
-          className="fixed bottom-4 left-1/2 z-60 flex -translate-x-1/2 items-center gap-3 rounded-full border border-border bg-background/95 py-1 pr-1 pl-4 text-sm text-muted-foreground shadow-lg backdrop-blur-sm"
-        >
-          <span className="max-w-56 truncate">
-            Closed “{lastClosed.doc.title || "Untitled"}”
-          </span>
-          <Button variant="ghost" size="xs" onClick={undoClose}>
-            Undo
-          </Button>
-        </div>
-      ) : null}
+        {showCopyConfirmation ? (
+          <div className="rounded-full border border-border bg-popover px-4 py-1.5 text-muted-foreground shadow-lg animate-in fade-in-0 duration-150">
+            Copied as Markdown
+          </div>
+        ) : null}
+
+        {lastClosed ? (
+          <div
+            role="status"
+            className="pointer-events-auto flex items-center gap-3 rounded-full border border-border bg-popover py-1 pr-1 pl-4 text-muted-foreground shadow-lg"
+          >
+            <span className="max-w-56 truncate">
+              Closed “{lastClosed.doc.title || "Untitled"}”
+            </span>
+            <Button variant="ghost" size="xs" onClick={undoClose}>
+              Undo
+            </Button>
+          </div>
+        ) : null}
+      </div>
     </header>
   );
 }

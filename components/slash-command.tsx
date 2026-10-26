@@ -37,7 +37,8 @@ import {
 
 interface CommandItem {
   title: string;
-  description: string;
+  /** What to type instead, shown as a hint. */
+  markdown?: string;
   aliases: string[];
   icon: IconSvgElement;
   command: (props: { editor: Editor; range: Range }) => void;
@@ -89,7 +90,7 @@ function insertTableCommand({
 const COMMAND_ITEMS: CommandItem[] = [
   {
     title: "Heading 1",
-    description: "Big section heading",
+    markdown: "#",
     aliases: ["h1", "heading", "title", "large"],
     icon: Heading01Icon,
     command: ({ editor, range }) => {
@@ -102,7 +103,7 @@ const COMMAND_ITEMS: CommandItem[] = [
   },
   {
     title: "Heading 2",
-    description: "Medium section heading",
+    markdown: "##",
     aliases: ["h2", "heading", "section", "medium"],
     icon: Heading02Icon,
     command: ({ editor, range }) => {
@@ -115,7 +116,7 @@ const COMMAND_ITEMS: CommandItem[] = [
   },
   {
     title: "Heading 3",
-    description: "Small section heading",
+    markdown: "###",
     aliases: ["h3", "heading", "small"],
     icon: Heading03Icon,
     command: ({ editor, range }) => {
@@ -127,8 +128,8 @@ const COMMAND_ITEMS: CommandItem[] = [
     },
   },
   {
-    title: "Bullet List",
-    description: "Create a simple bulleted list",
+    title: "Bullet list",
+    markdown: "-",
     aliases: ["bullet", "bullets", "list", "ul"],
     icon: LeftToRightListBulletIcon,
     command: ({ editor, range }) => {
@@ -140,8 +141,8 @@ const COMMAND_ITEMS: CommandItem[] = [
     },
   },
   {
-    title: "Numbered List",
-    description: "Create a numbered list",
+    title: "Numbered list",
+    markdown: "1.",
     aliases: ["numbered", "ordered", "list", "ol", "1."],
     icon: LeftToRightListNumberIcon,
     command: ({ editor, range }) => {
@@ -153,8 +154,8 @@ const COMMAND_ITEMS: CommandItem[] = [
     },
   },
   {
-    title: "Task List",
-    description: "Create a checklist with checkboxes",
+    title: "Task list",
+    markdown: "[ ]",
     aliases: ["task", "todo", "checklist", "checkbox"],
     icon: CheckmarkSquare02Icon,
     command: ({ editor, range }) => {
@@ -167,8 +168,8 @@ const COMMAND_ITEMS: CommandItem[] = [
   },
   {
     title: "Quote",
-    description: "Highlight a quote or callout",
-    aliases: ["quote", "blockquote", ">"],
+    markdown: ">",
+    aliases: ["quote", "blockquote", "callout", ">"],
     icon: LeftToRightBlockQuoteIcon,
     command: ({ editor, range }) => {
       applyCommand({
@@ -180,7 +181,7 @@ const COMMAND_ITEMS: CommandItem[] = [
   },
   {
     title: "Code",
-    description: "Capture code in a monospaced block",
+    markdown: "```",
     aliases: ["code", "codeblock", "snippet", "```"],
     icon: FileCodeIcon,
     command: ({ editor, range }) => {
@@ -193,7 +194,6 @@ const COMMAND_ITEMS: CommandItem[] = [
   },
   {
     title: "Table",
-    description: "Insert a table with header cells",
     aliases: ["table", "grid", "cells", "spreadsheet"],
     icon: TableIcon,
     command: ({ editor }) => {
@@ -207,7 +207,7 @@ const COMMAND_ITEMS: CommandItem[] = [
   },
   {
     title: "Divider",
-    description: "Insert a visual divider",
+    markdown: "---",
     aliases: ["divider", "rule", "line", "hr", "---"],
     icon: MinusSignIcon,
     command: ({ editor, range }) => {
@@ -284,10 +284,10 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(
     if (items.length === 0) return null;
 
     return (
-      <div className="z-50 w-72 overflow-hidden rounded-2xl border border-border bg-background/98 p-1.5 shadow-xl backdrop-blur-sm">
+      <div className="z-50 w-60 overflow-hidden rounded-2xl border border-border bg-popover p-1 text-popover-foreground shadow-lg">
         <div
           ref={listRef}
-          className="max-h-[min(22rem,calc(100vh-10rem))] overflow-y-auto pr-0.5"
+          className="max-h-[min(22rem,calc(100vh-10rem))] overflow-y-auto"
         >
         {items.map((item, index) => (
           <button
@@ -296,29 +296,24 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(
             type="button"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => selectItem(index)}
-            className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${
+            className={`flex h-9 w-full items-center gap-2.5 rounded-xl px-2.5 text-left text-sm transition-colors ${
               index === activeIndex
                 ? "bg-accent text-accent-foreground"
-                : "text-foreground hover:bg-accent/60"
+                : "text-foreground hover:bg-accent/50"
             }`}
           >
-            <span
-              className={`flex size-9 shrink-0 items-center justify-center rounded-lg border ${
-                index === activeIndex
-                  ? "border-border/60 bg-background/70"
-                  : "border-border/70 bg-muted/40"
-              }`}
-            >
-              <HugeiconsIcon icon={item.icon} size={18} strokeWidth={1.8} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-medium leading-5">
-                {item.title}
-              </span>
-              <span className="block text-xs leading-4 text-muted-foreground">
-                {item.description}
-              </span>
-            </span>
+            <HugeiconsIcon
+              icon={item.icon}
+              size={18}
+              strokeWidth={1.5}
+              className={`shrink-0 ${index === activeIndex ? "" : "text-muted-foreground"}`}
+            />
+            <span className="min-w-0 flex-1 truncate">{item.title}</span>
+            {item.markdown ? (
+              <kbd className="font-mono text-xs text-muted-foreground">
+                {item.markdown}
+              </kbd>
+            ) : null}
           </button>
         ))}
         </div>
@@ -337,7 +332,6 @@ const suggestion: Omit<SuggestionOptions<CommandItem, CommandItem>, "editor"> = 
     return COMMAND_ITEMS.filter((item) => {
       const haystacks = [
         item.title.toLowerCase(),
-        item.description.toLowerCase(),
         ...item.aliases.map((alias) => alias.toLowerCase()),
       ];
 

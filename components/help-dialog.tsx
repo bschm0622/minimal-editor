@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -35,10 +34,10 @@ const AGENT_SETUP = "claude mcp add --scope user minimal-editor -- npx -y minima
 const AGENT_DOCS = "https://github.com/bschm0622/minimal-editor#working-with-an-ai-agent";
 
 const FEATURES = [
-  "Paste Markdown to turn it into rich text.",
-  "Select text, then click the small Aa button for formatting, links, and copy-as-Markdown.",
+  "Paste Markdown and it turns into rich text.",
+  "Select text for a small bar to format it, copy it as Markdown, add an alternative or dim it.",
+  "Text with a dotted underline has other versions.",
   "A doc's tab is named after its first line.",
-  "Text with a dotted underline has other versions. Select text and use the bubble to add an alternative or dim it.",
 ];
 
 function SectionLabel({ children }: { children: string }) {
@@ -49,7 +48,7 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
-export function HelpDialog({ tooltipClassName }: { tooltipClassName?: string }) {
+export function HelpDialog() {
   const restoreInputRef = useRef<HTMLInputElement | null>(null);
   const [backupStatus, setBackupStatus] = useState("");
   const [setupCopied, setSetupCopied] = useState(false);
@@ -94,13 +93,12 @@ export function HelpDialog({ tooltipClassName }: { tooltipClassName?: string }) 
             </DialogTrigger>
           }
         />
-        <TooltipContent className={tooltipClassName}>Help</TooltipContent>
+        <TooltipContent>Help</TooltipContent>
       </Tooltip>
 
       <DialogContent className="max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto rounded-2xl sm:max-w-3xl">
-        <DialogHeader className="gap-1">
+        <DialogHeader>
           <DialogTitle>Help</DialogTitle>
-          <DialogDescription>A few useful rules, kept out of the way.</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-6 sm:grid-cols-2">
@@ -185,13 +183,18 @@ export function HelpDialog({ tooltipClassName }: { tooltipClassName?: string }) 
             only while it&apos;s connected.
           </p>
           <div className="flex items-center gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-md bg-muted px-2 py-1.5 text-xs text-muted-foreground select-all">
+            <code className="min-w-0 flex-1 truncate rounded-lg bg-muted px-2.5 py-2 text-xs text-muted-foreground select-all">
               {AGENT_SETUP}
             </code>
             <Button variant="outline" size="sm" onClick={copySetup}>
               {setupCopied ? "Copied" : "Copy"}
             </Button>
           </div>
+          <p className="text-muted-foreground">
+            Then, in Claude Code, type{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">/mcp__minimal-editor__edit</code>{" "}
+            and what you&apos;d like, or ask for edits to your draft in Minimal Editor.
+          </p>
           <a
             href={AGENT_DOCS}
             target="_blank"
