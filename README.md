@@ -183,7 +183,7 @@ npm run deploy   # build and deploy to Cloudflare
 
 ## Inspiration
 
-- Jason Fried's Write_On demo, for alternatives: switching between versions of
+- Jason Fried's [Write_On demo](https://x.com/jasonfried/status/2105403067793584590), for alternatives: switching between versions of
   a sentence in place, with a quiet list of them alongside.
 - [Proof](https://proofeditor.ai) by Every (open source as
   [Proof SDK](https://github.com/EveryInc/proof-sdk)), for giving an agent a
