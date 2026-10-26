@@ -16,8 +16,10 @@ editor's own address.
 claude mcp add --scope user minimal-editor -- npx -y minimal-editor-mcp
 ```
 
-Then open the editor, click the robot button in the toolbar, and ask Claude to
-suggest edits.
+Then open the editor, click the robot button in the toolbar, and in Claude
+Code type `/mcp__minimal-editor__edit` (optionally followed by what you want,
+like "tighten the intro"). Asking in your own words works too, as long as you
+name the editor: "suggest edits to my draft in Minimal Editor".
 
 ## Tools
 

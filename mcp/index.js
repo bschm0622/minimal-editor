@@ -121,7 +121,7 @@ function tool(method, toParams = (args) => args) {
   };
 }
 
-const INSTRUCTIONS = `Minimal Editor is a writing app whose docs live in the writer's browser. These tools reach the editor tab they connected from, and nothing else.
+const INSTRUCTIONS = `Use these tools whenever the user mentions their editor, their draft, a doc or post they're writing, or Minimal Editor, and asks you to read it, give feedback, suggest edits, cut, tighten or draft. Minimal Editor is a writing app whose docs live in the writer's browser. These tools reach the editor tab they connected from, and nothing else.
 
 Suggest edits as alternatives: extra versions of a word, sentence or paragraph that the writer switches between in place and keeps one of. Never keep or reject versions for them, and only change their text through suggest, or insert when they asked for drafted text.
 
@@ -141,7 +141,10 @@ const mcp = new McpServer(
 
 mcp.registerTool(
   "list_docs",
-  { description: "The writer's docs: [{ id, title, open }]. The open one is on their screen." },
+  {
+    description:
+      "Start here when the user asks about their draft or editor. The writer's docs in Minimal Editor: [{ id, title, open }]. The open one is on their screen.",
+  },
   tool("docs")
 );
 
@@ -217,6 +220,35 @@ mcp.registerTool(
     },
   },
   tool("insert")
+);
+
+mcp.registerPrompt(
+  "edit",
+  {
+    title: "Edit my draft",
+    description: "Read the doc open in Minimal Editor and suggest edits as alternatives.",
+    argsSchema: {
+      request: z
+        .string()
+        .optional()
+        .describe('What to do, e.g. "tighten the intro" or "draft a closing paragraph"'),
+    },
+  },
+  ({ request }) => ({
+    messages: [
+      {
+        role: "user",
+        content: {
+          type: "text",
+          text: `Open my draft in Minimal Editor with the minimal-editor tools (list_docs, then read_doc) and ${
+            request?.trim()
+              ? `do this: ${request.trim()}`
+              : "suggest edits where the writing could be clearer or tighter"
+          }. Put rewrites in as alternatives with suggest so I can compare and keep my own; only insert new paragraphs if I asked for drafted text. Tell me briefly what you suggested.`,
+        },
+      },
+    ],
+  })
 );
 
 listen();

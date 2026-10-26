@@ -83,7 +83,9 @@ alternatives, which you review like any others.
 2. Open the editor and click the robot button in the toolbar ("Connect
    agent"). The first time, Chrome asks to let the site reach apps on your
    device; allow it.
-3. Ask Claude to suggest edits to your draft.
+3. In Claude Code, type `/mcp__minimal-editor__edit`, optionally followed by
+   what you want ("tighten the intro"). Or just ask in your own words, naming
+   the editor: "suggest edits to my draft in Minimal Editor".
 
 The connection only reaches the editor, and only while it's on. The helper
 ([`mcp/`](mcp)) runs on your computer, accepts connections only from the
