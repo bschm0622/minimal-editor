@@ -193,16 +193,16 @@ export function HelpDialog() {
           <p className="text-muted-foreground">
             Then, in Claude Code, type{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-xs">/mcp__minimal-editor__edit</code>{" "}
-            and what you&apos;d like, or ask for edits to your draft in Minimal Editor.
+            and what you&apos;d like, or ask for edits to your draft in Minimal Editor.{" "}
+            <a
+              href={AGENT_DOCS}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-3 hover:text-foreground"
+            >
+              Setup details
+            </a>
           </p>
-          <a
-            href={AGENT_DOCS}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block text-muted-foreground underline underline-offset-3 hover:text-foreground"
-          >
-            Setup details
-          </a>
         </section>
       </DialogContent>
     </Dialog>
