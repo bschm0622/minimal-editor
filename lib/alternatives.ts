@@ -542,18 +542,6 @@ export function resolveAlternative(
   );
 }
 
-export function resolveAllAlternatives(editor: Editor, keep: "shown" | "original") {
-  const { state } = editor;
-  const tr = state.tr;
-  // Back to front, so earlier positions stay valid.
-  for (const range of collectAlternatives(state.doc).reverse()) {
-    const variants = liveVariants(state, range);
-    const content = variants[keep === "shown" ? range.active : 0];
-    replaceWithPlain(tr, range.from, range.to, inlineFromJSON(state.schema, content));
-  }
-  if (tr.docChanged) editor.view.dispatch(tr);
-}
-
 /** Alternatives with every version read live, for the side panel and the API. */
 export function listAlternatives(state: EditorState) {
   return collectAlternatives(state.doc).map((range) => ({

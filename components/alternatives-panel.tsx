@@ -4,14 +4,13 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BotIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { BotIcon, Cancel01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import {
   alternativeAt,
   inlineToMarkdown,
   inlineToText,
   listAlternatives,
   resolveAlternative,
-  resolveAllAlternatives,
   showVariant,
   textToInline,
   updateAlternative,
@@ -22,8 +21,9 @@ import {
 import { pruneFreshVersion, useAlternativesUI } from "@/lib/alternatives-ui";
 import { announce } from "@/lib/announce";
 import { useEditorStore } from "@/lib/editor-store";
-import { ALT_KEY, cn } from "@/lib/utils";
+import { ALT_KEY, cn, MOD_KEY } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const FONT_CLASS = {
   sans: "font-sans",
@@ -188,6 +188,13 @@ function VersionLine({
     return removed.index < index ? index - 1 : index;
   };
 
+  /** Keeps this version (or, from a blank line, the one on screen) and goes back to writing. */
+  const keep = () => {
+    const at = pruneOther();
+    resolveAlternative(editor, current.id, at ?? "shown");
+    backToText();
+  };
+
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.nativeEvent.isComposing) return;
     const textarea = event.currentTarget;
@@ -199,11 +206,8 @@ function VersionLine({
       event.preventDefault();
       backToText();
     } else if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-      // Keep this version (or, on a blank line, the one on screen) and go back to writing.
       event.preventDefault();
-      const at = pruneOther();
-      resolveAlternative(editor, current.id, at ?? "shown");
-      backToText();
+      keep();
     } else if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       // An empty line is already a new version waiting to be typed.
@@ -254,14 +258,14 @@ function VersionLine({
   const cut = index > 0 && !fresh && !version.text.trim();
 
   return (
-    <li className="flex items-start gap-2">
+    <li className="group flex items-start gap-2">
       <Bullet active={active} ai={version.ai} />
       <div className="min-w-0 flex-1">
         <textarea
           ref={ref}
           rows={1}
           value={draft ?? version.text.trim()}
-          // A cut shows as the original, faint, the way it looks in the doc.
+          // A cut shows the original, crossed out.
           placeholder={index === 0 ? "" : fresh ? "New version" : current.versions[0].text.trim()}
           aria-label={[
             index === 0 ? "Original" : `Version ${index + 1}`,
@@ -281,23 +285,37 @@ function VersionLine({
           className={cn(
             "field-sizing-content block w-full resize-none bg-transparent leading-5 outline-none",
             active ? "text-foreground" : "text-muted-foreground",
-            cut ? "placeholder:text-muted-foreground/45" : "placeholder:text-muted-foreground"
+            cut
+              ? cn("placeholder:line-through", active ? "placeholder:text-foreground" : "placeholder:text-muted-foreground")
+              : "placeholder:text-muted-foreground"
           )}
         />
       </div>
+      {fresh && !version.text.trim() ? null : (
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Use this version"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={keep}
+                className={cn(
+                  "-my-0.5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100",
+                  active && "opacity-60"
+                )}
+              />
+            }
+          >
+            <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2} />
+          </TooltipTrigger>
+          <TooltipContent>
+            Use this version <span className="opacity-60">{MOD_KEY}↵</span>
+          </TooltipContent>
+        </Tooltip>
+      )}
     </li>
-  );
-}
-
-function QuietButton({ children, onClick }: { children: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="-mx-1 rounded-md px-1 py-0.5 text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
-    >
-      {children}
-    </button>
   );
 }
 
@@ -358,8 +376,7 @@ export function AlternativesPanel() {
       className="fixed top-16 right-4 z-40 flex max-h-[calc(100dvh-5rem)] w-[calc(100%-2rem)] flex-col rounded-2xl border border-border bg-popover text-sm shadow-lg sm:w-68"
       aria-label="Alternatives"
     >
-      <div className="flex items-center justify-between border-b border-border py-1.5 pr-2 pl-4 text-xs text-muted-foreground">
-        <h2>{current ? "Versions" : "Alternatives"}</h2>
+      <div className="flex justify-end px-2 pt-2">
         <Button
           variant="ghost"
           size="icon-xs"
@@ -373,7 +390,7 @@ export function AlternativesPanel() {
           <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
         </Button>
       </div>
-      <div className={cn("overflow-y-auto px-4 py-3.5", FONT_CLASS[font])}>
+      <div className={cn("overflow-y-auto px-4 pt-1 pb-4", FONT_CLASS[font])}>
         {current ? (
           <ul key={current.id} className="flex flex-col gap-2.5">
             {current.versions.map((_, index) => (
@@ -390,7 +407,8 @@ export function AlternativesPanel() {
                   onClick={() => jumpTo(item.to)}
                   className={cn(
                     "min-w-0 flex-1 truncate rounded-sm text-left leading-5 transition-colors outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
-                    item.dimmed ? "text-muted-foreground/45" : "text-muted-foreground"
+                    "text-muted-foreground",
+                    item.dimmed && "line-through"
                   )}
                 >
                   {item.label}
@@ -405,55 +423,6 @@ export function AlternativesPanel() {
         )}
       </div>
 
-      {current || all.length ? (
-        <div className="flex items-center gap-3 border-t border-border px-4 py-2.5 text-xs">
-          {current ? (
-            <>
-              <QuietButton
-                onClick={() => {
-                  resolveAlternative(editor, current.id, "shown");
-                  backToText();
-                }}
-              >
-                Keep
-              </QuietButton>
-              {current.active !== 0 ? (
-                <QuietButton
-                  onClick={() => {
-                    resolveAlternative(editor, current.id, "original");
-                    backToText();
-                  }}
-                >
-                  Use original
-                </QuietButton>
-              ) : null}
-            </>
-          ) : (
-            <>
-              {all.length ? (
-                <>
-                  <QuietButton
-                    onClick={() => {
-                      resolveAllAlternatives(editor, "shown");
-                      backToText();
-                    }}
-                  >
-                    Keep all
-                  </QuietButton>
-                  <QuietButton
-                    onClick={() => {
-                      resolveAllAlternatives(editor, "original");
-                      backToText();
-                    }}
-                  >
-                    Use originals
-                  </QuietButton>
-                </>
-              ) : null}
-            </>
-          )}
-        </div>
-      ) : null}
     </aside>
   );
 }
