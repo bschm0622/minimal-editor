@@ -4,14 +4,20 @@ import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
 
 import { cn } from "@/lib/utils"
 
+// A short pause before every tooltip, so one doesn't flash under a pointer
+// that's passing by, or resting where a menu has just expanded. No instant
+// "warm" neighbours (timeout 0): clicking a trigger would otherwise let the
+// next tooltip under the pointer skip the pause.
 function TooltipProvider({
-  delay = 0,
+  delay = 300,
+  timeout = 0,
   ...props
 }: TooltipPrimitive.Provider.Props) {
   return (
     <TooltipPrimitive.Provider
       data-slot="tooltip-provider"
       delay={delay}
+      timeout={timeout}
       {...props}
     />
   )

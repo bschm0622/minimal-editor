@@ -2,9 +2,10 @@
 
 import { useCallback, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BotIcon, HelpCircleIcon } from "@hugeicons/core-free-icons";
+import { BotIcon, Copy01Icon, HelpCircleIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { announce } from "@/lib/announce";
 import { exportBackup, useEditorStore } from "@/lib/editor-store";
-import { ALT_KEY, IS_MAC, MOD_KEY } from "@/lib/utils";
+import { ALT_KEY, IS_MAC, MOD_KEY, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,8 +27,9 @@ const SHORTCUTS = [
   { key: `${ALT_KEY}[ / ]`, description: "Previous / next doc" },
   { key: `${ALT_KEY}1–9`, description: "Jump to a doc" },
   { key: `${ALT_KEY}↑ / ↓`, description: "Switch between alternatives" },
-  { key: `${ALT_KEY}↵`, description: "Add an alternative (with text selected), or show versions" },
+  { key: `${ALT_KEY}↵`, description: "Add or show alternatives" },
   { key: `${ALT_KEY}D`, description: "Dim or undim the selected text" },
+  { key: `↵ / ${MOD_KEY}↵`, description: "In the panel: add / keep a version" },
 ];
 
 const AGENT_SETUP = "claude mcp add --scope user minimal-editor -- npx -y minimal-editor-mcp";
@@ -42,13 +44,13 @@ const FEATURES = [
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <h3 className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+    <h3 className="text-xs font-medium tracking-[0.08em] text-muted-foreground uppercase">
       {children}
     </h3>
   );
 }
 
-export function HelpDialog() {
+export function HelpDialog({ triggerClassName }: { triggerClassName?: string }) {
   const restoreInputRef = useRef<HTMLInputElement | null>(null);
   const [backupStatus, setBackupStatus] = useState("");
   const [setupCopied, setSetupCopied] = useState(false);
@@ -57,6 +59,7 @@ export function HelpDialog() {
     try {
       await navigator.clipboard.writeText(AGENT_SETUP);
       setSetupCopied(true);
+      announce("Copied");
       setTimeout(() => setSetupCopied(false), 1200);
     } catch {
       // Clipboard access can be denied; the command is still there to select.
@@ -87,9 +90,16 @@ export function HelpDialog() {
         <TooltipTrigger
           render={
             <DialogTrigger
-              render={<Button variant="ghost" size="icon-sm" aria-label="Help" />}
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Help"
+                  className={triggerClassName}
+                />
+              }
             >
-              <HugeiconsIcon icon={HelpCircleIcon} size={18} strokeWidth={1.5} />
+              <HugeiconsIcon icon={HelpCircleIcon} size={16} strokeWidth={1.5} />
             </DialogTrigger>
           }
         />
@@ -134,7 +144,7 @@ export function HelpDialog() {
                 Docs autosave in this browser and nowhere else. Clearing your
                 browser&apos;s data deletes them, so download a backup now and then.
               </p>
-              <div className="flex gap-1">
+              <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={downloadBackup}>
                   Download backup
                 </Button>
@@ -182,12 +192,22 @@ export function HelpDialog() {
             in the toolbar to connect. The agent can only reach this editor, and
             only while it&apos;s connected.
           </p>
-          <div className="flex items-center gap-2">
-            <code className="min-w-0 flex-1 truncate rounded-lg bg-muted px-2.5 py-2 text-xs text-muted-foreground select-all">
+          <div className="flex items-center gap-2 rounded-xl bg-muted py-0.5 pr-0.5 pl-3">
+            <code className="min-w-0 flex-1 truncate text-xs text-muted-foreground select-all">
               {AGENT_SETUP}
             </code>
-            <Button variant="outline" size="sm" onClick={copySetup}>
-              {setupCopied ? "Copied" : "Copy"}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={copySetup}
+              aria-label={setupCopied ? "Copied" : "Copy command"}
+              className={cn("text-muted-foreground", setupCopied && "text-foreground")}
+            >
+              <HugeiconsIcon
+                icon={setupCopied ? Tick02Icon : Copy01Icon}
+                strokeWidth={1.75}
+                className="size-3.5"
+              />
             </Button>
           </div>
           <p className="text-muted-foreground">

@@ -28,7 +28,8 @@ const themeScript = `try{var t=localStorage.getItem("minimal-editor-theme");if(t
 
 export const metadata: Metadata = {
   title: "Minimal Editor",
-  description: "A distraction-free Markdown writing environment",
+  description:
+    "A simple writing app. Docs save in your browser, and any sentence can hold several versions to switch between.",
   icons: {
     icon: [
       { url: "/icon-light.svg", media: "(prefers-color-scheme: light)" },

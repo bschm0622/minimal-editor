@@ -6,6 +6,7 @@ import {
   Add01Icon,
   BotIcon,
   Copy01Icon,
+  Tick02Icon,
   CenterFocusIcon,
   LeftToRightListBulletIcon,
   Moon02Icon,
@@ -17,8 +18,8 @@ import { useShallow } from "zustand/react/shallow";
 import { startAgentBridge, stopAgentBridge, useAgentBridge } from "@/lib/agent-bridge";
 import { useAlternativesUI } from "@/lib/alternatives-ui";
 import { announce } from "@/lib/announce";
-import { ALT_KEY, cn } from "@/lib/utils";
-import { useEditorStore, type EditorFont } from "@/lib/editor-store";
+import { ALT_KEY, IS_MAC, cn } from "@/lib/utils";
+import { docLabel, useEditorStore, type EditorFont } from "@/lib/editor-store";
 import {
   COPY_MARKDOWN_EVENT,
   copyDocAsMarkdown,
@@ -38,14 +39,38 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-const FONT_OPTIONS: { value: EditorFont; label: string; sample: string }[] = [
-  { value: "sans", label: "Clean", sample: "Aa" },
-  { value: "classic", label: "Warm", sample: "Aa" },
-  { value: "editorial", label: "Editorial", sample: "Ag" },
-  { value: "mono", label: "Code", sample: "Aa" },
+// Each name is set in its own face, so the menu is its own preview.
+const FONT_OPTIONS: { value: EditorFont; label: string; className: string }[] = [
+  { value: "sans", label: "Clean", className: "font-sans" },
+  { value: "classic", label: "Warm", className: "font-classic" },
+  { value: "editorial", label: "Editorial", className: "font-editorial" },
+  { value: "mono", label: "Code", className: "font-mono" },
 ];
 
 const wordFormatter = new Intl.NumberFormat();
+
+// The page background in each theme, as in app/layout.tsx's viewport.
+const THEME_LIGHT = "#ffffff";
+const THEME_DARK = "#0a0a0a";
+
+const COPY_KEY = IS_MAC ? "⌘⇧C" : "Ctrl+Shift+C";
+
+// Icons rest muted and darken on hover. A mode that's on gets the same
+// pressed fill as the formatting toggles, a step stronger than hover.
+const BAR_BUTTON =
+  "text-muted-foreground aria-pressed:bg-foreground/10 aria-pressed:text-foreground dark:aria-pressed:bg-foreground/15";
+
+const TOAST =
+  "rounded-2xl border border-border bg-popover shadow-lg animate-in fade-in-0 duration-150";
+
+/** Cut by characters, not CSS, so the closing quote hugs the ellipsis. */
+function shortTitle(title: string) {
+  return title.length > 32 ? `${title.slice(0, 31).trimEnd()}…` : title;
+}
+
+function Shortcut({ children }: { children: string }) {
+  return <span className="opacity-60">{children}</span>;
+}
 
 const AGENT_LABEL = {
   off: "Connect agent",
@@ -85,6 +110,10 @@ export function Toolbar() {
   useEffect(() => {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     document.documentElement.classList.toggle("dark", isDark);
+    // Browser chrome follows the theme picked here, not only the system's.
+    document
+      .querySelectorAll('meta[name="theme-color"]')
+      .forEach((meta) => meta.setAttribute("content", isDark ? THEME_DARK : THEME_LIGHT));
 
     const handler = (e: MediaQueryListEvent) => {
       if (!localStorage.getItem("minimal-editor-theme")) {
@@ -148,7 +177,7 @@ export function Toolbar() {
 
   return (
     <header
-      className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between bg-background px-4 py-3"
+      className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between bg-background px-4 py-3 sm:px-2"
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
       onFocus={() => setExpanded(true)}
@@ -158,7 +187,7 @@ export function Toolbar() {
         }
       }}
     >
-      <div className="flex min-w-0 flex-1 items-center gap-3 pr-3">
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 pr-3">
         <button
           type="button"
           onClick={() => setExpanded((open) => !open)}
@@ -173,10 +202,12 @@ export function Toolbar() {
           />
         </button>
 
+        {/* Same 32px box as the buttons, so both ends of the bar sit 16px in. */}
         <div
-          className={`hidden shrink-0 items-center justify-center transition-all duration-200 sm:flex ${
+          className={cn(
+            "hidden size-8 shrink-0 items-center justify-center transition-colors duration-200 sm:flex",
             expanded ? "text-muted-foreground" : "text-muted-foreground/30"
-          }`}
+          )}
         >
           <HugeiconsIcon
             icon={QuillWrite02Icon}
@@ -188,11 +219,12 @@ export function Toolbar() {
       </div>
 
       <div
-        className={`absolute right-4 top-1/2 flex items-center gap-1 rounded-2xl border border-border bg-popover p-1 shadow-lg transition-all duration-200 sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none ${
+        className={cn(
+          "absolute right-4 top-1/2 flex items-center gap-1 rounded-2xl border border-border bg-popover p-1 shadow-lg transition-all duration-200 sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none",
           expanded
             ? "translate-y-[-50%] opacity-100 sm:translate-y-0"
             : "pointer-events-none translate-y-[-60%] opacity-0 sm:-translate-y-1"
-        }`}
+        )}
       >
         <span className="hidden px-2 text-xs tabular-nums text-muted-foreground sm:inline">
           {wordFormatter.format(words)} {words === 1 ? "word" : "words"}
@@ -207,14 +239,14 @@ export function Toolbar() {
                 onClick={togglePanel}
                 aria-label="Alternatives"
                 aria-pressed={panelOpen}
-                className="aria-pressed:bg-muted aria-pressed:text-foreground"
+                className={BAR_BUTTON}
               />
             }
           >
-            <HugeiconsIcon icon={LeftToRightListBulletIcon} size={18} strokeWidth={1.5} />
+            <HugeiconsIcon icon={LeftToRightListBulletIcon} size={16} strokeWidth={1.5} />
           </TooltipTrigger>
           <TooltipContent>
-            Alternatives <span className="opacity-60">{ALT_KEY}↵</span>
+            Alternatives <Shortcut>{`${ALT_KEY}↵`}</Shortcut>
           </TooltipContent>
         </Tooltip>
 
@@ -226,13 +258,14 @@ export function Toolbar() {
                 size="icon-sm"
                 onClick={newDoc}
                 aria-label="New doc"
+                className={BAR_BUTTON}
               />
             }
           >
-            <HugeiconsIcon icon={Add01Icon} size={18} strokeWidth={1.5} />
+            <HugeiconsIcon icon={Add01Icon} size={16} strokeWidth={1.5} />
           </TooltipTrigger>
           <TooltipContent>
-            New doc
+            New doc <Shortcut>{`${ALT_KEY}N`}</Shortcut>
           </TooltipContent>
         </Tooltip>
 
@@ -244,17 +277,18 @@ export function Toolbar() {
                 size="icon-sm"
                 onClick={handleCopyMarkdown}
                 aria-label="Copy as Markdown"
+                className={BAR_BUTTON}
               />
             }
           >
-            <HugeiconsIcon icon={Copy01Icon} size={18} strokeWidth={1.5} />
+            <HugeiconsIcon icon={Copy01Icon} size={16} strokeWidth={1.5} />
           </TooltipTrigger>
           <TooltipContent>
-            Copy as Markdown
+            Copy as Markdown <Shortcut>{COPY_KEY}</Shortcut>
           </TooltipContent>
         </Tooltip>
 
-        <Separator orientation="vertical" className="mx-1 h-5" />
+        <Separator orientation="vertical" className="mx-1 h-4" />
 
         <Popover>
           <Tooltip>
@@ -266,76 +300,56 @@ export function Toolbar() {
                       variant="ghost"
                       size="icon-sm"
                       aria-label="Change font"
+                      className={BAR_BUTTON}
                     />
                   }
                 >
-                  <HugeiconsIcon
-                    icon={TextFontIcon}
-                    size={18}
-                    strokeWidth={1.5}
-                  />
+                  <HugeiconsIcon icon={TextFontIcon} size={16} strokeWidth={1.5} />
                 </PopoverTrigger>
               }
             />
-            <TooltipContent>
-              Font
-            </TooltipContent>
+            <TooltipContent>Font</TooltipContent>
           </Tooltip>
-          <PopoverContent className="w-44 gap-0 p-1" side="bottom" align="end">
+          <PopoverContent className="w-40 gap-0 p-1" side="bottom" align="end">
             {FONT_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 type="button"
                 aria-pressed={font === opt.value}
                 onClick={() => setFont(opt.value)}
-                className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-sm transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${
-                  font === opt.value
-                    ? "bg-accent text-accent-foreground"
-                    : "text-foreground hover:bg-accent/50"
-                }`}
+                className="flex h-8 w-full items-center justify-between gap-2 rounded-xl px-2.5 text-sm text-foreground outline-none hover:bg-accent focus-visible:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
-                <span
-                  className={`text-base ${
-                    opt.value === "classic"
-                      ? "font-classic"
-                      : opt.value === "editorial"
-                        ? "font-editorial"
-                      : opt.value === "mono"
-                        ? "font-mono"
-                        : "font-sans"
-                  }`}
-                >
-                  {opt.sample}
-                </span>
-                <span>{opt.label}</span>
+                <span className={opt.className}>{opt.label}</span>
+                {font === opt.value ? (
+                  <HugeiconsIcon
+                    icon={Tick02Icon}
+                    size={14}
+                    strokeWidth={2}
+                    className="text-muted-foreground"
+                  />
+                ) : null}
               </button>
             ))}
           </PopoverContent>
         </Popover>
 
         <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={toggleFocusMode}
-                  aria-label="Focus mode"
-                  aria-pressed={focusMode}
-                  className="aria-pressed:bg-muted aria-pressed:text-foreground"
-                />
-              }
-            >
-              <HugeiconsIcon
-                icon={CenterFocusIcon}
-                size={18}
-                strokeWidth={1.5}
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={toggleFocusMode}
+                aria-label="Focus mode"
+                aria-pressed={focusMode}
+                className={BAR_BUTTON}
               />
-            </TooltipTrigger>
-            <TooltipContent>
-              Focus mode
-            </TooltipContent>
-          </Tooltip>
+            }
+          >
+            <HugeiconsIcon icon={CenterFocusIcon} size={16} strokeWidth={1.5} />
+          </TooltipTrigger>
+          <TooltipContent>Focus mode</TooltipContent>
+        </Tooltip>
 
         <Tooltip>
           <TooltipTrigger
@@ -345,21 +359,16 @@ export function Toolbar() {
                 size="icon-sm"
                 onClick={toggleTheme}
                 aria-label={isDark ? "Light mode" : "Dark mode"}
+                className={BAR_BUTTON}
               />
             }
           >
-            <HugeiconsIcon
-              icon={isDark ? Sun01Icon : Moon02Icon}
-              size={18}
-              strokeWidth={1.5}
-            />
+            <HugeiconsIcon icon={isDark ? Sun01Icon : Moon02Icon} size={16} strokeWidth={1.5} />
           </TooltipTrigger>
-          <TooltipContent>
-            {isDark ? "Light mode" : "Dark mode"}
-          </TooltipContent>
+          <TooltipContent>{isDark ? "Light mode" : "Dark mode"}</TooltipContent>
         </Tooltip>
 
-        <HelpDialog />
+        <HelpDialog triggerClassName={BAR_BUTTON} />
       </div>
 
       <Tooltip>
@@ -372,48 +381,44 @@ export function Toolbar() {
               aria-label={AGENT_LABEL[agentStatus]}
               aria-pressed={agentStatus !== "off"}
               className={cn(
-                "relative ml-1 transition-opacity duration-200",
-                agentStatus === "connected"
-                  ? "text-foreground"
-                  : "text-muted-foreground",
+                // The dot carries the status, so the icon stays muted even when on.
+                "relative ml-1 text-muted-foreground transition-opacity duration-200",
                 // Hidden with the rest of the toolbar unless an agent is on.
                 agentStatus === "off" && !expanded && "pointer-events-none opacity-0"
               )}
             />
           }
         >
-          <HugeiconsIcon icon={BotIcon} size={18} strokeWidth={1.5} />
+          <HugeiconsIcon icon={BotIcon} size={16} strokeWidth={1.5} />
           {agentStatus !== "off" ? (
             <span
               aria-hidden
               className={cn(
-                "absolute top-1 right-1 size-1.5 rounded-full",
+                "absolute top-1.5 right-1.5 size-1.5 rounded-full",
                 agentStatus === "connected"
                   ? "bg-[var(--link)]"
-                  : "border border-muted-foreground bg-background"
+                  : "border border-muted-foreground"
               )}
             />
           ) : null}
         </TooltipTrigger>
-        <TooltipContent>
-          {AGENT_LABEL[agentStatus]}
-        </TooltipContent>
+        <TooltipContent>{AGENT_LABEL[agentStatus]}</TooltipContent>
       </Tooltip>
 
       {/* Toasts stack at the bottom centre, so two at once never overlap. */}
       <div className="pointer-events-none fixed bottom-4 left-1/2 z-60 flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 flex-col items-center gap-2 text-sm">
         {saveFailed ? (
-          <div
-            role="alert"
-            className="pointer-events-auto max-w-sm rounded-2xl border border-destructive/40 bg-popover px-4 py-2.5 text-destructive shadow-lg"
-          >
-            Not saved: this browser&apos;s storage is full. Download a backup
-            from Help, then close docs you don&apos;t need.
+          <div role="alert" className={cn(TOAST, "pointer-events-auto max-w-sm px-4 py-2.5")}>
+            <span className="font-medium text-destructive">Not saved.</span>{" "}
+            <span className="text-muted-foreground">
+              This browser&apos;s storage is full. Download a backup from Help,
+              then close docs you don&apos;t need.
+            </span>
           </div>
         ) : null}
 
         {showCopyConfirmation ? (
-          <div className="rounded-full border border-border bg-popover px-4 py-1.5 text-muted-foreground shadow-lg animate-in fade-in-0 duration-150">
+          <div className={cn(TOAST, "px-4 py-1.5 text-muted-foreground")}>
             Copied as Markdown
           </div>
         ) : null}
@@ -421,10 +426,10 @@ export function Toolbar() {
         {lastClosed ? (
           <div
             role="status"
-            className="pointer-events-auto flex items-center gap-3 rounded-full border border-border bg-popover py-1 pr-1 pl-4 text-muted-foreground shadow-lg"
+            className={cn(TOAST, "pointer-events-auto flex items-center gap-2 py-1 pr-1 pl-4")}
           >
-            <span className="max-w-56 truncate">
-              Closed “{lastClosed.doc.title || "Untitled"}”
+            <span className="text-muted-foreground">
+              Closed “{shortTitle(docLabel(lastClosed.doc))}”
             </span>
             <Button variant="ghost" size="xs" onClick={undoClose}>
               Undo
