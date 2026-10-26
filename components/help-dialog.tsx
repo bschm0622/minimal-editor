@@ -29,7 +29,7 @@ const SHORTCUTS = [
   { key: `${ALT_KEY}↑ / ↓`, description: "Switch between alternatives" },
   { key: `${ALT_KEY}↵`, description: "Add or show alternatives" },
   { key: `${ALT_KEY}D`, description: "Dim or undim the selected text" },
-  { key: `↵ / ${MOD_KEY}↵`, description: "In the panel: add / keep a version" },
+  { key: `↵ / ${MOD_KEY}↵`, description: "In the panel: add / accept a version" },
 ];
 
 const AGENT_SETUP = "claude mcp add --scope user minimal-editor -- npx -y minimal-editor-mcp";

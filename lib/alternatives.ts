@@ -543,7 +543,7 @@ export function resolveAlternative(
 }
 
 /** Ends every alternative, keeping the version on screen: the doc stays exactly as it reads. */
-export function keepAllAsShown(editor: Editor) {
+export function acceptAllAlternatives(editor: Editor) {
   const { state } = editor;
   const tr = state.tr;
   // Back to front, so earlier positions stay valid.

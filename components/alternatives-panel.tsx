@@ -9,7 +9,7 @@ import {
   alternativeAt,
   inlineToMarkdown,
   inlineToText,
-  keepAllAsShown,
+  acceptAllAlternatives,
   listAlternatives,
   resolveAlternative,
   showVariant,
@@ -96,6 +96,7 @@ function useAlternativesState(editor: Editor | null, panelOpen: boolean) {
             to: r.to,
             label: inlineToText(r.variants[r.active]).trim() || inlineToText(r.variants[0]).trim(),
             dimmed: !r.variants[r.active].length,
+            changed: r.active !== 0,
           })),
         };
       },
@@ -103,19 +104,27 @@ function useAlternativesState(editor: Editor | null, panelOpen: boolean) {
   );
 }
 
-function Bullet({ active, ai }: { active: boolean; ai: boolean }) {
+/**
+ * The dot before a version or an alternative. Blue means a suggestion is on
+ * screen, as the doc's blue underline does; dark means the original is.
+ */
+function Bullet({ shown, ai }: { shown: "original" | "suggestion" | null; ai: boolean }) {
   return (
     <span
       className={cn(
         "flex h-5 w-3 shrink-0 items-center justify-center",
-        active ? "text-[var(--link)]" : "text-muted-foreground/60"
+        shown === "suggestion"
+          ? "text-[var(--link)]"
+          : shown === "original"
+            ? "text-foreground"
+            : "text-muted-foreground/60"
       )}
       aria-hidden
     >
       {ai ? (
         <HugeiconsIcon icon={BotIcon} size={12} strokeWidth={2} />
       ) : (
-        <span className={cn("rounded-full bg-current", active ? "size-1.5" : "size-1")} />
+        <span className={cn("rounded-full bg-current", shown ? "size-1.5" : "size-1")} />
       )}
     </span>
   );
@@ -260,7 +269,7 @@ function VersionLine({
 
   return (
     <li className="group flex items-start gap-2">
-      <Bullet active={active} ai={version.ai} />
+      <Bullet shown={active ? (index === 0 ? "original" : "suggestion") : null} ai={version.ai} />
       <div className="min-w-0 flex-1">
         <textarea
           ref={ref}
@@ -299,7 +308,7 @@ function VersionLine({
               <Button
                 variant="ghost"
                 size="icon-xs"
-                aria-label="Use this version"
+                aria-label="Accept this version"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={keep}
                 className={cn(
@@ -312,7 +321,7 @@ function VersionLine({
             <HugeiconsIcon icon={Tick02Icon} size={14} strokeWidth={2} />
           </TooltipTrigger>
           <TooltipContent>
-            Use this version <span className="opacity-60">{MOD_KEY}↵</span>
+            Accept this version <span className="opacity-60">{MOD_KEY}↵</span>
           </TooltipContent>
         </Tooltip>
       )}
@@ -326,6 +335,7 @@ export function AlternativesPanel() {
   const panelOpen = useAlternativesUI((state) => state.panelOpen);
   const { closePanel } = useAlternativesUI.getState();
   const { current, all, at } = useAlternativesState(editor, panelOpen);
+  const changedCount = all.filter((item) => item.changed).length;
   const currentId = current?.id ?? null;
 
   // Tell screen readers when the cursor reaches text with versions, and which one is showing.
@@ -402,7 +412,7 @@ export function AlternativesPanel() {
           <ul className="flex flex-col gap-2.5">
             {all.map((item) => (
               <li key={item.id} className="flex items-start gap-2">
-                <Bullet active={false} ai={false} />
+                <Bullet shown={item.changed ? "suggestion" : null} ai={false} />
                 <button
                   type="button"
                   onClick={() => jumpTo(item.to)}
@@ -425,18 +435,23 @@ export function AlternativesPanel() {
       </div>
 
       {!current && all.length ? (
-        <div className="border-t border-border px-4 py-2.5">
+        <div className="flex items-center justify-between border-t border-border px-4 py-2.5 text-xs">
           <button
             type="button"
             onClick={() => {
-              keepAllAsShown(editor);
+              acceptAllAlternatives(editor);
               closePanel();
               backToText();
             }}
-            className="-mx-1 rounded-md px-1 py-0.5 text-xs text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+            className="-mx-1 rounded-md px-1 py-0.5 font-medium text-foreground transition-colors outline-none hover:text-foreground/70 focus-visible:ring-2 focus-visible:ring-ring/50"
           >
-            Keep all as shown
+            Accept all
           </button>
+          <span className="text-muted-foreground">
+            {changedCount === 0
+              ? "No changes"
+              : `${changedCount} ${changedCount === 1 ? "change" : "changes"}`}
+          </span>
         </div>
       ) : null}
     </aside>

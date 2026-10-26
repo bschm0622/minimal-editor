@@ -49,11 +49,14 @@ screen, blue while another version is. Put the cursor in it and press
 `Alt + ↑ / ↓` to switch versions in place.
 
 `Alt + Enter` opens a side panel with the versions as a list (top line is the
-original, a robot marks AI suggestions). Type straight into a line to rewrite
-it; `Enter` adds a version, `↑ / ↓` moves between them, `Backspace` on an empty
-line deletes it, `Cmd/Ctrl + Enter` keeps that version, and `Esc` or
-`Alt + Enter` goes back to the text. With the cursor outside any alternative,
-the panel lists them all.
+original, a robot marks AI suggestions, a cut is crossed out). Type straight
+into a line to rewrite it; `Enter` adds a version, `↑ / ↓` moves between them,
+`Backspace` on an empty line deletes it, and `Esc` or `Alt + Enter` goes back
+to the text. To settle on one, click the ✓ on its line or press
+`Cmd/Ctrl + Enter`.
+
+With the cursor outside any alternative, the panel lists them all, blue where
+a suggestion is showing. Accept all keeps the doc exactly as it reads.
 
 To add one yourself, select text and press `Alt + Enter` (or the layers button
 in the bubble), then type the new version. `Alt + D` (or the eye button) dims the selected

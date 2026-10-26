@@ -132,7 +132,7 @@ Suggest edits as alternatives: extra versions of a word, sentence or paragraph t
 - Switching docs with open_doc changes what's on their screen, so say so.
 - Inserted paragraphs aren't marked, so tell the writer which ones you added.
 
-How they review: a dotted underline marks text with versions (blue when a suggestion is showing). Alt+↑/↓ (Option on a Mac) switches versions in place, Alt+Enter lists them, and Cmd/Ctrl+Enter keeps the one on screen.`;
+How they review: a dotted underline marks text with versions (blue when a suggestion is showing). Alt+↑/↓ (Option on a Mac) switches versions in place, Alt+Enter lists them, and the check on a version (or Cmd/Ctrl+Enter) accepts it.`;
 
 const mcp = new McpServer(
   { name: "minimal-editor", version: "0.1.0" },
