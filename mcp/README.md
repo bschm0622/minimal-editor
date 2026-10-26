@@ -1,4 +1,4 @@
-# minimal-editor-mcp
+# Minimal Editor helper
 
 Lets an AI agent read your [Minimal Editor](https://editor.beckyschmidt.me)
 docs and suggest edits, without giving it access to anything else in your
@@ -12,8 +12,11 @@ editor's own address.
 
 ## Setup with Claude Code
 
+From a copy of this repo, with Node 18 or newer:
+
 ```bash
-claude mcp add --scope user minimal-editor -- npx -y minimal-editor-mcp
+cd mcp && npm install
+claude mcp add --scope user minimal-editor -- node "$(pwd)/index.js"
 ```
 
 Then open the editor, click the robot button in the toolbar, and in Claude

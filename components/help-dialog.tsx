@@ -2,10 +2,9 @@
 
 import { useCallback, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BotIcon, Copy01Icon, HelpCircleIcon, Tick02Icon } from "@hugeicons/core-free-icons";
-import { announce } from "@/lib/announce";
+import { BotIcon, HelpCircleIcon } from "@hugeicons/core-free-icons";
 import { exportBackup, useEditorStore } from "@/lib/editor-store";
-import { ALT_KEY, IS_MAC, MOD_KEY, cn } from "@/lib/utils";
+import { ALT_KEY, IS_MAC, MOD_KEY } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -32,8 +31,7 @@ const SHORTCUTS = [
   { key: `↵ / ${MOD_KEY}↵`, description: "In the panel: add / accept a version" },
 ];
 
-const AGENT_SETUP = "claude mcp add --scope user minimal-editor -- npx -y minimal-editor-mcp";
-const AGENT_DOCS = "https://github.com/bschm0622/minimal-editor#working-with-an-ai-agent";
+const AGENT_DOCS = "https://github.com/bschm0622/minimal-editor#setup-with-claude-code";
 
 const FEATURES = [
   "Paste Markdown and it turns into rich text.",
@@ -53,18 +51,6 @@ function SectionLabel({ children }: { children: string }) {
 export function HelpDialog({ triggerClassName }: { triggerClassName?: string }) {
   const restoreInputRef = useRef<HTMLInputElement | null>(null);
   const [backupStatus, setBackupStatus] = useState("");
-  const [setupCopied, setSetupCopied] = useState(false);
-
-  const copySetup = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(AGENT_SETUP);
-      setSetupCopied(true);
-      announce("Copied");
-      setTimeout(() => setSetupCopied(false), 1200);
-    } catch {
-      // Clipboard access can be denied; the command is still there to select.
-    }
-  }, []);
 
   const downloadBackup = useCallback(() => {
     const url = URL.createObjectURL(new Blob([exportBackup()], { type: "application/json" }));
@@ -181,7 +167,16 @@ export function HelpDialog({ triggerClassName }: { triggerClassName?: string }) 
           <p className="text-muted-foreground">
             The editor has no AI built in. Your own agent, such as Claude Code, can
             read your doc and suggest edits as alternatives, and you decide what to
-            keep. Add the helper once, then click{" "}
+            keep. Once you&apos;ve{" "}
+            <a
+              href={AGENT_DOCS}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline underline-offset-3 hover:text-foreground"
+            >
+              set up the helper
+            </a>{" "}
+            from the repo, click{" "}
             <HugeiconsIcon
               icon={BotIcon}
               size={14}
@@ -192,36 +187,10 @@ export function HelpDialog({ triggerClassName }: { triggerClassName?: string }) 
             in the toolbar to connect. The agent can only reach this editor, and
             only while it&apos;s connected.
           </p>
-          <div className="flex items-center gap-2 rounded-xl bg-muted py-0.5 pr-0.5 pl-3">
-            <code className="min-w-0 flex-1 truncate text-xs text-muted-foreground select-all">
-              {AGENT_SETUP}
-            </code>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={copySetup}
-              aria-label={setupCopied ? "Copied" : "Copy command"}
-              className={cn("text-muted-foreground", setupCopied && "text-foreground")}
-            >
-              <HugeiconsIcon
-                icon={setupCopied ? Tick02Icon : Copy01Icon}
-                strokeWidth={1.75}
-                className="size-3.5"
-              />
-            </Button>
-          </div>
           <p className="text-muted-foreground">
             Then, in Claude Code, type{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-xs">/mcp__minimal-editor__edit</code>{" "}
-            and what you&apos;d like, or ask for edits to your draft in Minimal Editor.{" "}
-            <a
-              href={AGENT_DOCS}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline underline-offset-3 hover:text-foreground"
-            >
-              Setup details
-            </a>
+            and what you&apos;d like, or ask for edits to your draft in Minimal Editor.
           </p>
         </section>
       </DialogContent>

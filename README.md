@@ -77,11 +77,18 @@ alternatives, which you review like any others.
 
 ### Setup with Claude Code
 
-1. Add the helper (once):
+1. Get the helper from this repo and add it to Claude Code (once). It needs
+   Node 18 or newer:
 
    ```bash
-   claude mcp add --scope user minimal-editor -- npx -y minimal-editor-mcp
+   git clone https://github.com/bschm0622/minimal-editor
+   cd minimal-editor/mcp && npm install
+   claude mcp add --scope user minimal-editor -- node "$(pwd)/index.js"
    ```
+
+   You don't need to run the editor itself: the hosted one at
+   [editor.beckyschmidt.me](https://editor.beckyschmidt.me) connects to the
+   helper on your computer.
 
 2. Open the editor and click the robot button in the toolbar ("Connect
    agent"). The first time, Chrome asks to let the site reach apps on your
