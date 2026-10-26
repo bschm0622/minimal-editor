@@ -236,26 +236,6 @@ export function Toolbar() {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={togglePanel}
-                aria-label="Alternatives"
-                aria-pressed={panelOpen}
-                className={BAR_BUTTON}
-              />
-            }
-          >
-            <HugeiconsIcon icon={LeftToRightListBulletIcon} size={16} strokeWidth={1.5} />
-          </TooltipTrigger>
-          <TooltipContent>
-            Alternatives <Shortcut>{`${ALT_KEY}↵`}</Shortcut>
-          </TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
                 onClick={newDoc}
                 aria-label="New doc"
                 className={BAR_BUTTON}
@@ -369,6 +349,28 @@ export function Toolbar() {
         </Tooltip>
 
         <HelpDialog triggerClassName={BAR_BUTTON} />
+
+        <Separator orientation="vertical" className="mx-1 h-4" />
+
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={togglePanel}
+                aria-label="Alternatives"
+                aria-pressed={panelOpen}
+                className={BAR_BUTTON}
+              />
+            }
+          >
+            <HugeiconsIcon icon={LeftToRightListBulletIcon} size={16} strokeWidth={1.5} />
+          </TooltipTrigger>
+          <TooltipContent>
+            Alternatives <Shortcut>{`${ALT_KEY}↵`}</Shortcut>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <Tooltip>
@@ -396,7 +398,7 @@ export function Toolbar() {
               className={cn(
                 "absolute top-1.5 right-1.5 size-1.5 rounded-full",
                 agentStatus === "connected"
-                  ? "bg-[var(--link)]"
+                  ? "bg-emerald-500 dark:bg-emerald-400"
                   : "border border-muted-foreground"
               )}
             />
