@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BotIcon } from "@hugeicons/core-free-icons";
+import { BotIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import {
   alternativeAt,
   inlineToMarkdown,
@@ -23,6 +23,7 @@ import { pruneFreshVersion, useAlternativesUI } from "@/lib/alternatives-ui";
 import { announce } from "@/lib/announce";
 import { useEditorStore } from "@/lib/editor-store";
 import { ALT_KEY, cn, MOD_KEY } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 const FONT_CLASS = {
   sans: "font-sans",
@@ -356,7 +357,19 @@ export function AlternativesPanel() {
       )}
       aria-label="Alternatives"
     >
-      <div className={cn("flex-1 overflow-y-auto", FONT_CLASS[font])}>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label="Close"
+        className="absolute top-3 right-3 text-muted-foreground"
+        onClick={() => {
+          closePanel();
+          backToText();
+        }}
+      >
+        <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
+      </Button>
+      <div className={cn("flex-1 overflow-y-auto pr-5", FONT_CLASS[font])}>
         {current ? (
           <ul key={current.id} className="flex flex-col gap-1">
             {current.versions.map((_, index) => (
@@ -435,16 +448,6 @@ export function AlternativesPanel() {
                 </QuietButton>
               </>
             ) : null}
-            <span className="ml-auto">
-              <QuietButton
-                onClick={() => {
-                  closePanel();
-                  backToText();
-                }}
-              >
-                Close
-              </QuietButton>
-            </span>
           </>
         )}
       </div>
