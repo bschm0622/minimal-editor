@@ -177,19 +177,16 @@
   height: 0;
 }
 
-/* Focus mode: fade unfocused blocks */
-.focus-mode .tiptap > *:not(.has-focus) {
+/* Focus mode: everything but the block being written in steps back. Inside a
+   list, that's the item, so the rest of that list fades too. */
+.focus-mode .tiptap > *,
+.focus-mode .tiptap li {
+  transition: opacity 0.3s ease;
+}
+
+.focus-mode .tiptap:focus-within > :not(.has-focus, :has(.has-focus)),
+.focus-mode .tiptap:focus-within > :has(.has-focus) li:not(.has-focus, :has(.has-focus)) {
   opacity: 0.3;
-  transition: opacity 0.3s ease;
-}
-
-.focus-mode .tiptap > .has-focus {
-  opacity: 1;
-  transition: opacity 0.3s ease;
-}
-
-.focus-mode .tiptap:not(:focus-within) > * {
-  opacity: 1;
 }
 
 /* Prose overrides for minimal aesthetic */
@@ -208,7 +205,7 @@
 
 .tiptap.prose h2 {
   font-size: 1.5em;
-  margin-top: 1.25em;
+  margin-top: 1.5em;
   margin-bottom: 0.5em;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -216,8 +213,8 @@
 
 .tiptap.prose h3 {
   font-size: 1.25em;
-  margin-top: 1em;
-  margin-bottom: 0.5em;
+  margin-top: 1.4em;
+  margin-bottom: 0.4em;
   font-weight: 600;
 }
 
@@ -226,11 +223,134 @@
   margin-top: 0 !important;
 }
 
+/* Lists: every item holds a paragraph, so the typography plugin's loose-list
+   spacing would put a paragraph's worth of air between items. */
+.tiptap.prose :is(ul, ol) {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+  padding-inline-start: 1.5em;
+}
+
+.tiptap.prose li {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+  padding-inline-start: 0.25em;
+}
+
+.tiptap.prose li > p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.tiptap.prose li :is(ul, ol) {
+  margin-top: 0.25em;
+  margin-bottom: 0;
+}
+
+.tiptap.prose li::marker {
+  color: var(--muted-foreground);
+}
+
+.tiptap.prose ul > li::marker {
+  color: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
+}
+
+/* Task lists: the checkbox sits on the first line, in the bullet's place. */
+.tiptap.prose ul[data-type="taskList"] {
+  list-style: none;
+  padding-inline-start: 0.125em;
+}
+
+.tiptap.prose ul[data-type="taskList"] > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6em;
+  padding-inline-start: 0;
+}
+
+.tiptap.prose ul[data-type="taskList"] > li::marker {
+  content: none;
+}
+
+.tiptap ul[data-type="taskList"] > li > label {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  /* One line tall, so the box centres on the first line of text. */
+  height: 1lh;
+  user-select: none;
+}
+
+.tiptap ul[data-type="taskList"] > li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.tiptap.prose ul[data-type="taskList"] > li > div > p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.tiptap ul[data-type="taskList"] input[type="checkbox"] {
+  appearance: none;
+  display: grid;
+  place-content: center;
+  width: 1em;
+  height: 1em;
+  margin: 0;
+  border: 1.5px solid color-mix(in oklab, var(--foreground) 50%, transparent);
+  border-radius: 0.3em;
+  background: var(--background);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.tiptap ul[data-type="taskList"] input[type="checkbox"]:hover {
+  border-color: color-mix(in oklab, var(--foreground) 75%, transparent);
+}
+
+.tiptap ul[data-type="taskList"] input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.tiptap ul[data-type="taskList"] input[type="checkbox"]::before {
+  content: "";
+  width: 0.62em;
+  height: 0.62em;
+  background: var(--background);
+  /* A tick, drawn as a mask so it takes the background colour. */
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2 5 8.6l4.5-5.2' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  opacity: 0;
+}
+
+.tiptap ul[data-type="taskList"] input[type="checkbox"]:checked {
+  border-color: var(--foreground);
+  background: var(--foreground);
+}
+
+.tiptap ul[data-type="taskList"] input[type="checkbox"]:checked::before {
+  opacity: 1;
+}
+
+.tiptap.prose ul[data-type="taskList"] > li[data-checked="true"] > div > p {
+  color: var(--muted-foreground);
+  text-decoration-line: line-through;
+  text-decoration-color: color-mix(in oklab, var(--muted-foreground) 60%, transparent);
+}
+
+/* Code and table headers sit on a faint tint of the text colour, so they
+   weigh the same in light and dark. */
 .tiptap.prose code {
-  background: var(--muted);
-  padding: 0.15em 0.35em;
-  border-radius: 0.25em;
-  font-size: 0.875em;
+  background: color-mix(in oklab, var(--foreground) 6%, transparent);
+  color: var(--foreground);
+  padding: 0.125em 0.3em;
+  border-radius: 0.3em;
+  font-size: 0.85em;
+  font-weight: 400;
   font-family: var(--font-geist-mono), ui-monospace, monospace;
 }
 
@@ -241,25 +361,28 @@
 }
 
 .tiptap.prose pre {
-  background: var(--muted);
+  background: color-mix(in oklab, var(--foreground) 5%, transparent);
   color: var(--foreground);
-  border: 1px solid var(--border);
-  border-radius: 0.5em;
-  padding: 1em;
+  border-radius: 0.625rem;
+  padding: 0.875em 1.125em;
+  font-size: 0.8125em;
+  line-height: 1.7;
   overflow-x: auto;
 }
 
 .tiptap.prose pre code {
   background: none;
   padding: 0;
+  border-radius: 0;
   color: inherit;
-  font-size: 0.875em;
+  font-size: inherit;
 }
 
 .tiptap.prose blockquote {
-  border-left: 3px solid var(--border);
+  border-left: 2px solid color-mix(in oklab, var(--foreground) 18%, transparent);
   padding-left: 1em;
   color: var(--muted-foreground);
+  font-weight: inherit;
 }
 
 .tiptap.prose blockquote p:first-of-type::before,
@@ -270,6 +393,11 @@
 .tiptap.prose hr {
   border-color: var(--border);
   margin: 2em 0;
+}
+
+/* A divider selected on its own (click, or arrow keys) shows it. */
+.tiptap hr.ProseMirror-selectednode {
+  border-color: var(--link);
 }
 
 .tiptap .tableWrapper {
@@ -293,7 +421,7 @@
 }
 
 .tiptap th {
-  background: color-mix(in oklab, var(--muted) 78%, transparent);
+  background: color-mix(in oklab, var(--foreground) 3.5%, transparent);
   font-weight: 600;
 }
 
@@ -318,11 +446,10 @@
 .tiptap .selectedCell::after {
   position: absolute;
   inset: 0;
-  background: color-mix(in oklab, var(--accent) 45%, transparent);
+  background: color-mix(in oklab, var(--link) 14%, transparent);
   content: "";
   pointer-events: none;
 }
-
 
 .tiptap a[href],
 .tiptap.prose a[href] {
@@ -339,6 +466,11 @@
 .tiptap a[href]:hover,
 .tiptap.prose a[href]:hover {
   color: var(--link-hover) !important;
+}
+
+/* The words a link is being added to, while the link field has focus. */
+.tiptap .link-target {
+  background: color-mix(in oklab, var(--link) 22%, transparent);
 }
 
 .tiptap a.editor-link[href],

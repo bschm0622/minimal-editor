@@ -106,7 +106,7 @@ function Bullet({ active, ai }: { active: boolean; ai: boolean }) {
   return (
     <span
       className={cn(
-        "flex h-6 w-3 shrink-0 items-center justify-center",
+        "flex h-5 w-3 shrink-0 items-center justify-center",
         active ? "text-[var(--link)]" : "text-muted-foreground/60"
       )}
       aria-hidden
@@ -260,7 +260,7 @@ function VersionLine({
           ref={ref}
           rows={1}
           value={draft ?? version.text.trim()}
-          placeholder={index === 0 || fresh ? "" : "dimmed"}
+          placeholder={index === 0 ? "" : fresh ? "New version" : "dimmed"}
           aria-label={[
             index === 0 ? "Original" : `Version ${index + 1}`,
             active && "showing",
@@ -276,8 +276,10 @@ function VersionLine({
           }}
           onKeyDown={handleKeyDown}
           className={cn(
-            "field-sizing-content block w-full resize-none bg-transparent leading-6 outline-none placeholder:italic",
-            active ? "text-foreground placeholder:text-foreground/50" : "text-muted-foreground",
+            "field-sizing-content block w-full resize-none bg-transparent leading-5 outline-none placeholder:italic",
+            active
+              ? "text-foreground placeholder:text-foreground/70"
+              : "text-muted-foreground placeholder:text-muted-foreground",
             removed && draft === null && "italic"
           )}
         />
@@ -286,12 +288,24 @@ function VersionLine({
   );
 }
 
-function QuietButton({ children, onClick }: { children: string; onClick: () => void }) {
+function QuietButton({
+  children,
+  primary,
+  onClick,
+}: {
+  children: string;
+  /** The likely next step: a shade stronger than the rest. */
+  primary?: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="font-medium text-muted-foreground transition-colors hover:text-foreground"
+      className={cn(
+        "-mx-1 rounded-md px-1 py-0.5 font-medium transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
+        primary ? "text-foreground/85" : "text-muted-foreground"
+      )}
     >
       {children}
     </button>
@@ -353,7 +367,7 @@ export function AlternativesPanel() {
   return (
     <aside
       className={cn(
-        "fixed top-14 right-0 bottom-0 z-40 flex w-full flex-col border-l border-border bg-background px-5 pt-6 pb-4 text-sm sm:w-72"
+        "fixed top-14 right-0 bottom-0 z-40 flex w-full flex-col border-l border-border bg-background px-5 pt-5 pb-4 text-sm sm:w-72"
       )}
       aria-label="Alternatives"
     >
@@ -361,7 +375,8 @@ export function AlternativesPanel() {
         variant="ghost"
         size="icon-xs"
         aria-label="Close"
-        className="absolute top-3 right-3 text-muted-foreground"
+        // Centred on the first line of the list.
+        className="absolute top-4.5 right-4 text-muted-foreground"
         onClick={() => {
           closePanel();
           backToText();
@@ -371,13 +386,13 @@ export function AlternativesPanel() {
       </Button>
       <div className={cn("flex-1 overflow-y-auto pr-5", FONT_CLASS[font])}>
         {current ? (
-          <ul key={current.id} className="flex flex-col gap-1">
+          <ul key={current.id} className="flex flex-col gap-2.5">
             {current.versions.map((_, index) => (
               <VersionLine key={index} editor={editor} current={current} index={index} />
             ))}
           </ul>
         ) : all.length ? (
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-2.5">
             {all.map((item) => (
               <li key={item.id} className="flex items-start gap-2">
                 <Bullet active={false} ai={false} />
@@ -385,7 +400,7 @@ export function AlternativesPanel() {
                   type="button"
                   onClick={() => jumpTo(item.to)}
                   className={cn(
-                    "min-w-0 flex-1 truncate text-left leading-6 text-muted-foreground transition-colors hover:text-foreground",
+                    "min-w-0 flex-1 truncate rounded-sm text-left leading-5 text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
                     item.dimmed && "italic"
                   )}
                 >
@@ -395,7 +410,7 @@ export function AlternativesPanel() {
             ))}
           </ul>
         ) : (
-          <p className="leading-6 text-muted-foreground">
+          <p className="leading-5 text-muted-foreground">
             No alternatives yet. Select text and press {ALT_KEY}↵ to add one.
           </p>
         )}
@@ -405,6 +420,7 @@ export function AlternativesPanel() {
         {current ? (
           <>
             <QuietButton
+              primary
               onClick={() => {
                 resolveAlternative(editor, current.id, "shown");
                 backToText();
@@ -431,6 +447,7 @@ export function AlternativesPanel() {
             {all.length ? (
               <>
                 <QuietButton
+                  primary
                   onClick={() => {
                     resolveAllAlternatives(editor, "shown");
                     backToText();

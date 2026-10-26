@@ -48,7 +48,7 @@ import { useEditorKeyboardShortcuts } from "@/lib/use-editor-keyboard-shortcuts"
 import { cn } from "@/lib/utils";
 import { AlternativeGap, AlternativeMark } from "@/lib/alternatives";
 import { AlternativeShortcuts } from "@/lib/alternatives-ui";
-import { EditorBubbleMenu } from "./editor-bubble-menu";
+import { EditorBubbleMenu, LinkTarget } from "./editor-bubble-menu";
 import { SlashCommands } from "./slash-command";
 
 function nodeHasContent(node: ProseMirrorNode | null | undefined) {
@@ -124,7 +124,7 @@ export function EditorSurface({
   docRevision = 0,
   onChange,
   onEditorReady,
-  placeholder = "Start writing... Type / for blocks, or # for a heading.",
+  placeholder = "Start writing… Type / for blocks, or # for a heading.",
   focusMode = false,
   font = "sans",
   containerClassName,
@@ -181,6 +181,7 @@ export function EditorSurface({
       }),
       TableEditingShortcuts,
       SlashCommands,
+      LinkTarget,
       AlternativeMark,
       AlternativeGap,
       AlternativeShortcuts,

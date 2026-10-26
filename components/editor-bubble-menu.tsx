@@ -9,8 +9,19 @@ import {
   useMemo,
   type ReactElement,
 } from "react";
-import { findParentNodeClosestToPos, type Editor } from "@tiptap/core";
-import type { EditorState, Selection } from "@tiptap/pm/state";
+import {
+  Extension,
+  findParentNodeClosestToPos,
+  type Editor,
+} from "@tiptap/core";
+import {
+  NodeSelection,
+  Plugin,
+  PluginKey,
+  type EditorState,
+  type Selection,
+} from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import { useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
@@ -58,6 +69,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { copyEditorSelectionAsMarkdown } from "@/lib/editor-copy-actions";
 import {
+  AlternativeGap,
   alternativeInSelection,
   canAddAlternative,
   dimmedInSelection,
@@ -152,6 +164,42 @@ type BubbleMenuOptions = NonNullable<
 
 const BUBBLE_MENU_PLUGIN_KEY = "bubbleMenu";
 
+type LinkTargetRange = { from: number; to: number } | null;
+const LINK_TARGET_KEY = new PluginKey<LinkTargetRange>("linkTarget");
+
+/** Marks the text a link is being added to while the link field has focus. */
+export const LinkTarget = Extension.create({
+  name: "linkTarget",
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin<LinkTargetRange>({
+        key: LINK_TARGET_KEY,
+        state: {
+          init: () => null,
+          apply(tr, range) {
+            const meta = tr.getMeta(LINK_TARGET_KEY) as LinkTargetRange | undefined;
+            if (meta !== undefined) return meta;
+            return range
+              ? { from: tr.mapping.map(range.from), to: tr.mapping.map(range.to) }
+              : null;
+          },
+        },
+        props: {
+          decorations(state) {
+            const range = LINK_TARGET_KEY.getState(state);
+            return range && range.from < range.to
+              ? DecorationSet.create(state.doc, [
+                  Decoration.inline(range.from, range.to, { class: "link-target" }),
+                ])
+              : null;
+          },
+        },
+      }),
+    ];
+  },
+});
+
 const BUBBLE_MENU_POSITION_OPTIONS: BubbleMenuOptions = {
   strategy: "fixed",
   placement: "top",
@@ -174,11 +222,15 @@ type TableButtonPosition = { top: number; right: number };
 function TableMenuButton({
   icon,
   destructive,
+  pressed,
   children,
   ...props
 }: {
   icon: IconSvgElement;
+  /** Turns red only on hover or focus, so the menu isn't half alarm. */
   destructive?: boolean;
+  /** For an on/off item: shows a tick while on. */
+  pressed?: boolean;
   disabled?: boolean;
   onClick: () => void;
   children: string;
@@ -187,16 +239,44 @@ function TableMenuButton({
     <Button
       size="sm"
       variant="ghost"
+      aria-pressed={pressed}
       className={cn(
-        "justify-start rounded-xl px-2.5 font-normal",
-        destructive && "text-destructive hover:text-destructive"
+        "group/item justify-start rounded-xl px-2.5 font-normal",
+        destructive &&
+          "hover:bg-destructive/10 hover:text-destructive focus-visible:text-destructive dark:hover:bg-destructive/15"
       )}
       {...props}
     >
-      <HugeiconsIcon icon={icon} size={16} strokeWidth={1.75} />
+      <HugeiconsIcon
+        icon={icon}
+        size={16}
+        strokeWidth={1.75}
+        className={cn(
+          "text-muted-foreground",
+          destructive
+            ? "group-hover/item:text-destructive group-focus-visible/item:text-destructive"
+            : "group-hover/item:text-foreground"
+        )}
+      />
       {children}
+      {pressed ? (
+        <HugeiconsIcon
+          icon={Tick02Icon}
+          size={14}
+          strokeWidth={2}
+          className="ml-auto text-muted-foreground"
+        />
+      ) : null}
     </Button>
   );
+}
+
+function tableHasHeaderRow(editor: Editor) {
+  const table = findParentNodeClosestToPos(
+    editor.state.selection.$from,
+    (node) => node.type.name === "table"
+  );
+  return table?.node.firstChild?.firstChild?.type.name === "tableHeader";
 }
 
 function getActiveTableWrapper(editor: Editor) {
@@ -247,6 +327,7 @@ export function EditorBubbleMenu({
     null
   );
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const tableMenuRef = useRef<HTMLDivElement | null>(null);
   const linkOpenRef = useRef(linkOpen);
   const linkInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -287,6 +368,10 @@ export function EditorBubbleMenu({
       hasDimmed: currentEditor
         ? dimmedInSelection(currentEditor.state).length > 0
         : false,
+      // Dimmed text on its own: formatting and copying have nothing to act on.
+      isDimmedOnly:
+        currentEditor?.state.selection instanceof NodeSelection &&
+        currentEditor.state.selection.node.type.name === AlternativeGap.name,
       canAddAlternative: currentEditor
         ? canAddAlternative(
             currentEditor.state,
@@ -308,7 +393,7 @@ export function EditorBubbleMenu({
       canToggleHeaderRow: currentEditor
         ? currentEditor.can().toggleHeaderRow()
         : false,
-      hasHeaderRow: currentEditor?.isActive("tableHeader") ?? false,
+      hasHeaderRow: currentEditor ? tableHasHeaderRow(currentEditor) : false,
     }),
   });
   const activeLinkUrl = editorState?.activeLinkUrl ?? "";
@@ -418,6 +503,21 @@ export function EditorBubbleMenu({
 
     focusLinkInput();
   }, [editor, focusLinkInput, linkOpen, refreshMenuVisibility]);
+
+  // The link field takes focus, and the selection's highlight goes with it.
+  // Keep the words being linked marked until the field closes.
+  useEffect(() => {
+    if (!linkOpen) return;
+    const { from, to } = editor.state.selection;
+    if (from === to) return;
+
+    editor.view.dispatch(editor.state.tr.setMeta(LINK_TARGET_KEY, { from, to }));
+    return () => {
+      if (!editor.isDestroyed) {
+        editor.view.dispatch(editor.state.tr.setMeta(LINK_TARGET_KEY, null));
+      }
+    };
+  }, [editor, linkOpen]);
 
   const openLinkEditor = useCallback(() => {
     onLinkOpenChange(true);
@@ -620,7 +720,7 @@ export function EditorBubbleMenu({
                   closeLinkEditor();
                 }
               }}
-              className="h-8 w-56 border-0 bg-transparent px-1 text-sm shadow-none focus-visible:ring-0 aria-invalid:text-destructive aria-invalid:ring-0 sm:w-72 dark:bg-transparent"
+              className="h-8 w-56 border-0 bg-transparent px-1 text-sm shadow-none focus-visible:ring-0 aria-invalid:ring-0 sm:w-72 dark:bg-transparent"
             />
             {linkInvalid ? (
               <span role="alert" className="shrink-0 px-1 text-xs text-destructive">
@@ -708,38 +808,42 @@ export function EditorBubbleMenu({
 
         {menuMode === "handle" ? (
           <>
-            <MenuTooltip label="Format">
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                className="size-7 rounded-full"
-                onClick={() => setFormatExpanded(true)}
-                aria-label="Show formatting"
-              >
-                <HugeiconsIcon icon={TextFontIcon} size={15} strokeWidth={2} />
-              </Button>
-            </MenuTooltip>
-            <MenuTooltip
-              label={showCopyConfirmation ? "Copied" : "Copy as Markdown"}
-            >
-              <Button
-                size="icon-sm"
-                variant="ghost"
-                className="size-7 rounded-full"
-                onClick={copySelection}
-                aria-label={
-                  showCopyConfirmation
-                    ? "Copied selection as Markdown"
-                    : "Copy selection as Markdown"
-                }
-              >
-                <HugeiconsIcon
-                  icon={showCopyConfirmation ? Tick02Icon : Copy01Icon}
-                  size={15}
-                  strokeWidth={2}
-                />
-              </Button>
-            </MenuTooltip>
+            {editorState?.isDimmedOnly ? null : (
+              <>
+                <MenuTooltip label="Format">
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    className="size-7 rounded-full"
+                    onClick={() => setFormatExpanded(true)}
+                    aria-label="Show formatting"
+                  >
+                    <HugeiconsIcon icon={TextFontIcon} size={15} strokeWidth={2} />
+                  </Button>
+                </MenuTooltip>
+                <MenuTooltip
+                  label={showCopyConfirmation ? "Copied" : "Copy as Markdown"}
+                >
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    className="size-7 rounded-full"
+                    onClick={copySelection}
+                    aria-label={
+                      showCopyConfirmation
+                        ? "Copied selection as Markdown"
+                        : "Copy selection as Markdown"
+                    }
+                  >
+                    <HugeiconsIcon
+                      icon={showCopyConfirmation ? Tick02Icon : Copy01Icon}
+                      size={15}
+                      strokeWidth={2}
+                    />
+                  </Button>
+                </MenuTooltip>
+              </>
+            )}
             {editorState?.canAddAlternative ? (
               <MenuTooltip label="Add alternative" shortcut={`${ALT_KEY}↵`}>
                 <Button
@@ -800,7 +904,7 @@ export function EditorBubbleMenu({
             <MenuTooltip label="Bold" shortcut={`${MOD_KEY}B`}>
               <Toggle
                 size="sm"
-                className="px-2 sm:px-3"
+                className="px-2"
                 pressed={editorState?.isBold}
                 onPressedChange={() => focusEditor().toggleBold().run()}
                 aria-label="Bold"
@@ -811,7 +915,7 @@ export function EditorBubbleMenu({
             <MenuTooltip label="Italic" shortcut={`${MOD_KEY}I`}>
               <Toggle
                 size="sm"
-                className="px-2 sm:px-3"
+                className="px-2"
                 pressed={editorState?.isItalic}
                 onPressedChange={() => focusEditor().toggleItalic().run()}
                 aria-label="Italic"
@@ -822,7 +926,7 @@ export function EditorBubbleMenu({
             <MenuTooltip label="Underline" shortcut={`${MOD_KEY}U`}>
               <Toggle
                 size="sm"
-                className="px-2 sm:px-3"
+                className="px-2"
                 pressed={editorState?.isUnderline}
                 onPressedChange={() => focusEditor().toggleUnderline().run()}
                 aria-label="Underline"
@@ -833,7 +937,7 @@ export function EditorBubbleMenu({
             <MenuTooltip label="Strikethrough" shortcut={`${MOD_KEY}⇧S`}>
               <Toggle
                 size="sm"
-                className="px-2 sm:px-3"
+                className="px-2"
                 pressed={editorState?.isStrike}
                 onPressedChange={() => focusEditor().toggleStrike().run()}
                 aria-label="Strikethrough"
@@ -844,7 +948,7 @@ export function EditorBubbleMenu({
             <MenuTooltip label="Inline code" shortcut={`${MOD_KEY}E`}>
               <Toggle
                 size="sm"
-                className="px-2 sm:px-3"
+                className="px-2"
                 pressed={editorState?.isCode}
                 onPressedChange={() => focusEditor().toggleCode().run()}
                 aria-label="Inline code"
@@ -852,16 +956,13 @@ export function EditorBubbleMenu({
                 <HugeiconsIcon icon={CodeSimpleIcon} size={16} strokeWidth={2} />
               </Toggle>
             </MenuTooltip>
-
-            <Separator orientation="vertical" className="mx-0.5 h-5" />
-
             <MenuTooltip
               label={isLinkActive ? "Edit link" : "Add link"}
               shortcut={`${MOD_KEY}K`}
             >
               <Toggle
                 size="sm"
-                className="px-2 sm:px-3"
+                className="px-2"
                 pressed={isLinkActive}
                 onPressedChange={openLinkEditor}
                 aria-label="Link"
@@ -875,11 +976,10 @@ export function EditorBubbleMenu({
             <MenuTooltip
               label={showCopyConfirmation ? "Copied" : "Copy as Markdown"}
             >
-              <Toggle
-                size="sm"
-                className="px-2 sm:px-3"
-                pressed={false}
-                onPressedChange={copySelection}
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                onClick={copySelection}
                 aria-label={
                   showCopyConfirmation
                     ? "Copied selection as Markdown"
@@ -891,7 +991,7 @@ export function EditorBubbleMenu({
                   size={16}
                   strokeWidth={2}
                 />
-              </Toggle>
+              </Button>
             </MenuTooltip>
           </>
         ) : null}
@@ -924,10 +1024,16 @@ export function EditorBubbleMenu({
               Table
             </PopoverTrigger>
             <PopoverContent
+              ref={tableMenuRef}
               className="w-72 gap-1 p-1"
               side="top"
               align="end"
               sideOffset={8}
+              // Opened from the keyboard, focus the first item; opened with
+              // the pointer, focus the menu itself so no item lights up.
+              initialFocus={(openType) =>
+                openType === "keyboard" ? true : tableMenuRef.current
+              }
             >
               <div className="grid grid-cols-2 gap-1">
                 <TableMenuButton
@@ -960,6 +1066,7 @@ export function EditorBubbleMenu({
                 </TableMenuButton>
                 <TableMenuButton
                   icon={TableRowsSplitIcon}
+                  pressed={editorState?.hasHeaderRow ?? false}
                   disabled={!editorState?.canToggleHeaderRow}
                   onClick={() => runTableCommand((chain) => chain.toggleHeaderRow())}
                 >

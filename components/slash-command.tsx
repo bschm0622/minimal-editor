@@ -284,10 +284,10 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(
     if (items.length === 0) return null;
 
     return (
-      <div className="z-50 w-60 overflow-hidden rounded-2xl border border-border bg-popover p-1 text-popover-foreground shadow-lg">
+      <div className="z-50 w-56 overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground shadow-lg">
         <div
           ref={listRef}
-          className="max-h-[min(22rem,calc(100vh-10rem))] overflow-y-auto"
+          className="max-h-[min(21.5rem,calc(100vh-10rem))] overflow-y-auto p-1"
         >
         {items.map((item, index) => (
           <button
@@ -296,7 +296,7 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(
             type="button"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => selectItem(index)}
-            className={`flex h-9 w-full items-center gap-2.5 rounded-xl px-2.5 text-left text-sm transition-colors ${
+            className={`flex h-8 w-full items-center gap-2.5 rounded-xl px-2.5 text-left text-sm transition-colors ${
               index === activeIndex
                 ? "bg-accent text-accent-foreground"
                 : "text-foreground hover:bg-accent/50"
@@ -304,8 +304,8 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(
           >
             <HugeiconsIcon
               icon={item.icon}
-              size={18}
-              strokeWidth={1.5}
+              size={16}
+              strokeWidth={1.75}
               className={`shrink-0 ${index === activeIndex ? "" : "text-muted-foreground"}`}
             />
             <span className="min-w-0 flex-1 truncate">{item.title}</span>
