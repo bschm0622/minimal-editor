@@ -367,24 +367,26 @@ export function AlternativesPanel() {
   return (
     <aside
       className={cn(
-        "fixed top-14 right-0 bottom-0 z-40 flex w-full flex-col border-l border-border bg-background px-5 pt-5 pb-4 text-sm sm:w-72"
+        "fixed top-14 right-0 bottom-0 z-40 flex w-full flex-col bg-background px-5 pt-3 pb-4 text-sm sm:w-72"
       )}
       aria-label="Alternatives"
     >
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        aria-label="Close"
-        // Centred on the first line of the list.
-        className="absolute top-4.5 right-4 text-muted-foreground"
-        onClick={() => {
-          closePanel();
-          backToText();
-        }}
-      >
-        <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
-      </Button>
-      <div className={cn("flex-1 overflow-y-auto pr-5", FONT_CLASS[font])}>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-xs text-muted-foreground">{current ? "Versions" : "Alternatives"}</h2>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label="Close"
+          className="-mr-1.5 text-muted-foreground"
+          onClick={() => {
+            closePanel();
+            backToText();
+          }}
+        >
+          <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
+        </Button>
+      </div>
+      <div className={cn("flex-1 overflow-y-auto", FONT_CLASS[font])}>
         {current ? (
           <ul key={current.id} className="flex flex-col gap-2.5">
             {current.versions.map((_, index) => (
