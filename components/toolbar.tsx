@@ -7,6 +7,7 @@ import {
   BotIcon,
   Copy01Icon,
   CenterFocusIcon,
+  LeftToRightListBulletIcon,
   Moon02Icon,
   QuillWrite02Icon,
   Sun01Icon,
@@ -14,7 +15,9 @@ import {
 } from "@hugeicons/core-free-icons";
 import { useShallow } from "zustand/react/shallow";
 import { startAgentBridge, stopAgentBridge, useAgentBridge } from "@/lib/agent-bridge";
+import { useAlternativesUI } from "@/lib/alternatives-ui";
 import { announce } from "@/lib/announce";
+import { ALT_KEY, cn } from "@/lib/utils";
 import { useEditorStore, type EditorFont } from "@/lib/editor-store";
 import {
   COPY_MARKDOWN_EVENT,
@@ -44,6 +47,12 @@ const FONT_OPTIONS: { value: EditorFont; label: string; sample: string }[] = [
 
 const wordFormatter = new Intl.NumberFormat();
 
+const AGENT_LABEL = {
+  off: "Connect agent",
+  waiting: "Waiting for agent · click to stop",
+  connected: "Agent connected · click to disconnect",
+} as const;
+
 export function Toolbar() {
   const { focusMode, font, toggleFocusMode, setFont, newDoc } = useEditorStore(
     useShallow((state) => ({
@@ -61,6 +70,7 @@ export function Toolbar() {
   const undoClose = useEditorStore((state) => state.undoClose);
   const saveFailed = useEditorStore((state) => state.saveFailed);
   const agentStatus = useAgentBridge((state) => state.status);
+  const panelOpen = useAlternativesUI((state) => state.panelOpen);
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
 
@@ -120,6 +130,16 @@ export function Toolbar() {
     document.documentElement.classList.toggle("dark", next);
     localStorage.setItem("minimal-editor-theme", next ? "dark" : "light");
   }, [isDark]);
+
+  const togglePanel = useCallback(() => {
+    const ui = useAlternativesUI.getState();
+    if (ui.panelOpen) {
+      ui.closePanel();
+      useEditorStore.getState().editor?.commands.focus(null, { scrollIntoView: false });
+    } else {
+      ui.openPanel();
+    }
+  }, []);
 
   const handleCopyMarkdown = useCallback(async () => {
     const { editor } = useEditorStore.getState();
@@ -193,6 +213,26 @@ export function Toolbar() {
               <Button
                 variant="ghost"
                 size="icon-sm"
+                onClick={togglePanel}
+                aria-label="Alternatives"
+                aria-pressed={panelOpen}
+                className={panelOpen ? "bg-accent" : ""}
+              />
+            }
+          >
+            <HugeiconsIcon icon={LeftToRightListBulletIcon} size={18} strokeWidth={1.5} />
+          </TooltipTrigger>
+          <TooltipContent className={tooltipFontClassName}>
+            Alternatives <span className="opacity-60">{ALT_KEY}↵</span>
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 onClick={newDoc}
                 aria-label="New doc"
               />
@@ -220,26 +260,6 @@ export function Toolbar() {
           </TooltipTrigger>
           <TooltipContent className={tooltipFontClassName}>
             Copy as Markdown
-          </TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={agentStatus === "off" ? startAgentBridge : stopAgentBridge}
-                aria-label={agentStatus === "off" ? "Connect agent" : "Disconnect agent"}
-                aria-pressed={agentStatus !== "off"}
-                className={agentStatus !== "off" ? "bg-accent" : ""}
-              />
-            }
-          >
-            <HugeiconsIcon icon={BotIcon} size={18} strokeWidth={1.5} />
-          </TooltipTrigger>
-          <TooltipContent className={tooltipFontClassName}>
-            {agentStatus === "off" ? "Connect agent" : "Disconnect agent"}
           </TooltipContent>
         </Tooltip>
 
@@ -359,6 +379,44 @@ export function Toolbar() {
         Copied as Markdown
       </div>
 
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={agentStatus === "off" ? startAgentBridge : stopAgentBridge}
+              aria-label={AGENT_LABEL[agentStatus]}
+              aria-pressed={agentStatus !== "off"}
+              className={cn(
+                "relative ml-1 transition-all duration-200",
+                agentStatus === "connected"
+                  ? "text-foreground"
+                  : "text-muted-foreground",
+                // Hidden with the rest of the toolbar unless an agent is on.
+                agentStatus === "off" && !expanded && "pointer-events-none opacity-0"
+              )}
+            />
+          }
+        >
+          <HugeiconsIcon icon={BotIcon} size={18} strokeWidth={1.5} />
+          {agentStatus !== "off" ? (
+            <span
+              aria-hidden
+              className={cn(
+                "absolute top-1 right-1 size-1.5 rounded-full",
+                agentStatus === "connected"
+                  ? "bg-[var(--link)]"
+                  : "border border-muted-foreground bg-background"
+              )}
+            />
+          ) : null}
+        </TooltipTrigger>
+        <TooltipContent className={tooltipFontClassName}>
+          {AGENT_LABEL[agentStatus]}
+        </TooltipContent>
+      </Tooltip>
+
       {saveFailed ? (
         <div
           role="alert"
@@ -366,20 +424,6 @@ export function Toolbar() {
         >
           Not saved: this browser&apos;s storage is full. Download a backup from
           Help, then close docs you don&apos;t need.
-        </div>
-      ) : null}
-
-      {agentStatus !== "off" ? (
-        <div className="fixed bottom-4 left-5 z-40 flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{agentStatus === "connected" ? "Agent connected" : "Waiting for agent…"}</span>
-          <span aria-hidden>·</span>
-          <button
-            type="button"
-            onClick={stopAgentBridge}
-            className="transition-colors hover:text-foreground"
-          >
-            Disconnect
-          </button>
         </div>
       ) : null}
 

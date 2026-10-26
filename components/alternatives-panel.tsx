@@ -7,7 +7,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { BotIcon } from "@hugeicons/core-free-icons";
 import {
   alternativeAt,
-  collectAlternatives,
   inlineToMarkdown,
   inlineToText,
   listAlternatives,
@@ -51,7 +50,7 @@ interface AtCursor {
   gap: boolean;
 }
 
-const EMPTY = { current: null, all: [], count: 0, at: null };
+const EMPTY = { current: null, all: [], at: null };
 
 function atCursor(editor: Editor): AtCursor | null {
   const range = alternativeAt(editor.state);
@@ -72,10 +71,8 @@ function useAlternativesState(editor: Editor | null, panelOpen: boolean) {
       editor,
       selector: ({ editor: e }) => {
         if (!e) return EMPTY;
-        // Closed, the panel only needs the count for its button.
-        if (!panelOpen) {
-          return { ...EMPTY, count: collectAlternatives(e.state.doc).length, at: atCursor(e) };
-        }
+        // Closed, the panel only tracks the cursor, for screen reader announcements.
+        if (!panelOpen) return { ...EMPTY, at: atCursor(e) };
         const all = listAlternatives(e.state);
         const at = alternativeAt(e.state);
         const range = at && all.find((r) => r.id === at.id);
@@ -92,7 +89,6 @@ function useAlternativesState(editor: Editor | null, panelOpen: boolean) {
         return {
           current,
           at: atCursor(e),
-          count: all.length,
           all: all.map((r) => ({
             id: r.id,
             to: r.to,
@@ -305,8 +301,8 @@ export function AlternativesPanel() {
   const editor = useEditorStore((state) => state.editor);
   const font = useEditorStore((state) => state.font);
   const panelOpen = useAlternativesUI((state) => state.panelOpen);
-  const { openPanel, closePanel } = useAlternativesUI.getState();
-  const { current, all, count, at } = useAlternativesState(editor, panelOpen);
+  const { closePanel } = useAlternativesUI.getState();
+  const { current, all, at } = useAlternativesState(editor, panelOpen);
   const currentId = current?.id ?? null;
 
   // Tell screen readers when the cursor reaches text with versions, and which one is showing.
@@ -345,18 +341,7 @@ export function AlternativesPanel() {
 
   if (!editor) return null;
 
-  if (!panelOpen) {
-    if (!count) return null;
-    return (
-      <button
-        type="button"
-        className="fixed right-5 bottom-4 z-40 text-xs text-muted-foreground transition-colors hover:text-foreground"
-        onClick={() => openPanel()}
-      >
-        {count} {count === 1 ? "alternative" : "alternatives"}
-      </button>
-    );
-  }
+  if (!panelOpen) return null;
 
   const jumpTo = (to: number) => {
     editor.chain().focus().setTextSelection(to).scrollIntoView().run();
