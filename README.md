@@ -181,7 +181,13 @@ npm run deploy   # build and deploy to Cloudflare
 - Tailwind CSS 4
 - Cloudflare Workers
 
-The alternatives feature was inspired by Jason Fried's Write_On demo.
+## Inspiration
+
+- Jason Fried's Write_On demo, for alternatives: switching between versions of
+  a sentence in place, with a quiet list of them alongside.
+- [Proof](https://proofeditor.ai) by Every (open source as
+  [Proof SDK](https://github.com/EveryInc/proof-sdk)), for giving an agent a
+  narrow way into the editor instead of the whole browser.
 
 ## License
 
