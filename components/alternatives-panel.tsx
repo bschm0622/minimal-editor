@@ -9,6 +9,7 @@ import {
   alternativeAt,
   inlineToMarkdown,
   inlineToText,
+  keepAllAsShown,
   listAlternatives,
   resolveAlternative,
   showVariant,
@@ -423,6 +424,21 @@ export function AlternativesPanel() {
         )}
       </div>
 
+      {!current && all.length ? (
+        <div className="border-t border-border px-4 py-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              keepAllAsShown(editor);
+              closePanel();
+              backToText();
+            }}
+            className="-mx-1 rounded-md px-1 py-0.5 text-xs text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+          >
+            Keep all as shown
+          </button>
+        </div>
+      ) : null}
     </aside>
   );
 }

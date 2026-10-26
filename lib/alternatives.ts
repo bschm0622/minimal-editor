@@ -542,6 +542,18 @@ export function resolveAlternative(
   );
 }
 
+/** Ends every alternative, keeping the version on screen: the doc stays exactly as it reads. */
+export function keepAllAsShown(editor: Editor) {
+  const { state } = editor;
+  const tr = state.tr;
+  // Back to front, so earlier positions stay valid.
+  for (const range of collectAlternatives(state.doc).reverse()) {
+    const content = liveVariants(state, range)[range.active];
+    replaceWithPlain(tr, range.from, range.to, inlineFromJSON(state.schema, content));
+  }
+  if (tr.docChanged) editor.view.dispatch(tr);
+}
+
 /** Alternatives with every version read live, for the side panel and the API. */
 export function listAlternatives(state: EditorState) {
   return collectAlternatives(state.doc).map((range) => ({
