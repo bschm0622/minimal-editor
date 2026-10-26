@@ -124,7 +124,7 @@ function Bullet({ shown, ai }: { shown: "original" | "suggestion" | null; ai: bo
       {ai ? (
         <HugeiconsIcon icon={BotIcon} size={12} strokeWidth={2} />
       ) : (
-        <span className={cn("rounded-full bg-current", shown ? "size-1.5" : "size-1")} />
+        <span className="size-1.5 rounded-full bg-current" />
       )}
     </span>
   );
