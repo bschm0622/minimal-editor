@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { HelpCircleIcon } from "@hugeicons/core-free-icons";
+import { BotIcon, HelpCircleIcon } from "@hugeicons/core-free-icons";
 import { exportBackup, useEditorStore } from "@/lib/editor-store";
 import { ALT_KEY, IS_MAC, MOD_KEY } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,9 @@ const SHORTCUTS = [
   { key: `${ALT_KEY}D`, description: "Dim or undim the selected text" },
 ];
 
+const AGENT_SETUP = "claude mcp add --scope user minimal-editor -- npx -y minimal-editor-mcp";
+const AGENT_DOCS = "https://github.com/bschm0622/minimal-editor#working-with-an-ai-agent";
+
 const FEATURES = [
   "Paste Markdown to turn it into rich text.",
   "Select text, then click the small Aa button for formatting, links, and copy-as-Markdown.",
@@ -49,6 +52,17 @@ function SectionLabel({ children }: { children: string }) {
 export function HelpDialog({ tooltipClassName }: { tooltipClassName?: string }) {
   const restoreInputRef = useRef<HTMLInputElement | null>(null);
   const [backupStatus, setBackupStatus] = useState("");
+  const [setupCopied, setSetupCopied] = useState(false);
+
+  const copySetup = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(AGENT_SETUP);
+      setSetupCopied(true);
+      setTimeout(() => setSetupCopied(false), 1200);
+    } catch {
+      // Clipboard access can be denied; the command is still there to select.
+    }
+  }, []);
 
   const downloadBackup = useCallback(() => {
     const url = URL.createObjectURL(new Blob([exportBackup()], { type: "application/json" }));
@@ -153,6 +167,40 @@ export function HelpDialog({ tooltipClassName }: { tooltipClassName?: string }) 
             </section>
           </div>
         </div>
+
+        <section className="space-y-2 border-t border-border pt-5">
+          <SectionLabel>Working with an AI agent</SectionLabel>
+          <p className="text-muted-foreground">
+            The editor has no AI built in. Your own agent, such as Claude Code, can
+            read your doc and suggest edits as alternatives, and you decide what to
+            keep. Add the helper once, then click{" "}
+            <HugeiconsIcon
+              icon={BotIcon}
+              size={14}
+              strokeWidth={1.5}
+              className="inline align-[-2px]"
+              aria-label="the robot button"
+            />{" "}
+            in the toolbar to connect. The agent can only reach this editor, and
+            only while it&apos;s connected.
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="min-w-0 flex-1 truncate rounded-md bg-muted px-2 py-1.5 text-xs text-muted-foreground select-all">
+              {AGENT_SETUP}
+            </code>
+            <Button variant="outline" size="sm" onClick={copySetup}>
+              {setupCopied ? "Copied" : "Copy"}
+            </Button>
+          </div>
+          <a
+            href={AGENT_DOCS}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block text-muted-foreground underline underline-offset-3 hover:text-foreground"
+          >
+            Setup details
+          </a>
+        </section>
       </DialogContent>
     </Dialog>
   );
