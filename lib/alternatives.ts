@@ -618,13 +618,10 @@ const alternativesPlugin = (markType: () => MarkType) =>
       decorations(state) {
         const range = alternativeAt(state);
         if (!range) return null;
-        const { $from } = state.selection;
         return DecorationSet.create(state.doc, [
           range.gap
             ? Decoration.node(range.from, range.to, { class: "alt-current" })
             : Decoration.inline(range.from, range.to, { class: "alt-current" }),
-          // The block around it stays bright while the panel dims the rest.
-          Decoration.node($from.before(1), $from.after(1), { class: "alt-block" }),
         ]);
       },
       // Copying (or dragging) a whole alternative keeps its versions, up to

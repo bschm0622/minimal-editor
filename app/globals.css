@@ -526,12 +526,6 @@
   border-radius: 0.15em;
 }
 
-/* While the versions panel is open, the rest of the doc steps back. */
-.alt-panel-open .tiptap:has(.alt-block) > :not(.alt-block) {
-  opacity: 0.3;
-  transition: opacity 0.3s ease;
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   ::before,

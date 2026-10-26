@@ -251,6 +251,8 @@ function VersionLine({
     (state) => state.fresh?.id === current.id && state.fresh.index === index
   );
 
+  const cut = index > 0 && !fresh && !version.text.trim();
+
   return (
     <li className="flex items-start gap-2">
       <Bullet active={active} ai={version.ai} />
@@ -259,9 +261,11 @@ function VersionLine({
           ref={ref}
           rows={1}
           value={draft ?? version.text.trim()}
-          placeholder={index === 0 ? "" : fresh ? "New version" : "dimmed"}
+          // A cut shows as the original, faint, the way it looks in the doc.
+          placeholder={index === 0 ? "" : fresh ? "New version" : current.versions[0].text.trim()}
           aria-label={[
             index === 0 ? "Original" : `Version ${index + 1}`,
+            cut && "dimmed",
             active && "showing",
             version.ai && "suggested by AI",
           ]
@@ -275,8 +279,9 @@ function VersionLine({
           }}
           onKeyDown={handleKeyDown}
           className={cn(
-            "field-sizing-content block w-full resize-none bg-transparent leading-5 outline-none placeholder:text-muted-foreground",
-            active ? "text-foreground" : "text-muted-foreground"
+            "field-sizing-content block w-full resize-none bg-transparent leading-5 outline-none",
+            active ? "text-foreground" : "text-muted-foreground",
+            cut ? "placeholder:text-muted-foreground/45" : "placeholder:text-muted-foreground"
           )}
         />
       </div>
@@ -353,19 +358,22 @@ export function AlternativesPanel() {
       className="fixed top-16 right-4 z-40 flex max-h-[calc(100dvh-5rem)] w-[calc(100%-2rem)] flex-col rounded-2xl border border-border bg-popover text-sm shadow-lg sm:w-68"
       aria-label="Alternatives"
     >
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        aria-label="Close"
-        className="absolute top-2.5 right-2.5 text-muted-foreground"
-        onClick={() => {
-          closePanel();
-          backToText();
-        }}
-      >
-        <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
-      </Button>
-      <div className={cn("overflow-y-auto py-3.5 pr-10 pl-4", FONT_CLASS[font])}>
+      <div className="flex items-center justify-between border-b border-border py-1.5 pr-2 pl-4 text-xs text-muted-foreground">
+        <h2>{current ? "Versions" : "Alternatives"}</h2>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          aria-label="Close"
+          className="text-muted-foreground"
+          onClick={() => {
+            closePanel();
+            backToText();
+          }}
+        >
+          <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
+        </Button>
+      </div>
+      <div className={cn("overflow-y-auto px-4 py-3.5", FONT_CLASS[font])}>
         {current ? (
           <ul key={current.id} className="flex flex-col gap-2.5">
             {current.versions.map((_, index) => (
@@ -380,7 +388,10 @@ export function AlternativesPanel() {
                 <button
                   type="button"
                   onClick={() => jumpTo(item.to)}
-                  className="min-w-0 flex-1 truncate rounded-sm text-left leading-5 text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+                  className={cn(
+                    "min-w-0 flex-1 truncate rounded-sm text-left leading-5 transition-colors outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
+                    item.dimmed ? "text-muted-foreground/45" : "text-muted-foreground"
+                  )}
                 >
                   {item.label}
                 </button>
