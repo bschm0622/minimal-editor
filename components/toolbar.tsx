@@ -413,7 +413,7 @@ export function Toolbar() {
             </TooltipContent>
           </Tooltip>
           <PopoverContent
-            className="w-[min(24rem,calc(100vw-1rem))] gap-3 p-3"
+            className="max-h-[calc(100dvh-5rem)] w-[min(24rem,calc(100vw-1rem))] gap-3 overflow-y-auto p-3"
             side="bottom"
             align="end"
           >
