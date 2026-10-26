@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
   BotIcon,
   Copy01Icon,
   CenterFocusIcon,
-  HelpCircleIcon,
   Moon02Icon,
   QuillWrite02Icon,
   Sun01Icon,
@@ -16,13 +15,13 @@ import {
 import { useShallow } from "zustand/react/shallow";
 import { startAgentBridge, stopAgentBridge, useAgentBridge } from "@/lib/agent-bridge";
 import { announce } from "@/lib/announce";
-import { exportBackup, useEditorStore, type EditorFont } from "@/lib/editor-store";
-import { ALT_KEY, IS_MAC, MOD_KEY } from "@/lib/utils";
+import { useEditorStore, type EditorFont } from "@/lib/editor-store";
 import {
   COPY_MARKDOWN_EVENT,
   copyDocAsMarkdown,
 } from "@/lib/use-editor-keyboard-shortcuts";
 import { DocTabs } from "@/components/doc-tabs";
+import { HelpDialog } from "@/components/help-dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -33,9 +32,6 @@ import {
 import {
   Popover,
   PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
 
@@ -44,28 +40,6 @@ const FONT_OPTIONS: { value: EditorFont; label: string; sample: string }[] = [
   { value: "classic", label: "Warm", sample: "Aa" },
   { value: "editorial", label: "Editorial", sample: "Ag" },
   { value: "mono", label: "Code", sample: "Aa" },
-];
-
-const HELP_SHORTCUTS = [
-  { key: "/", description: "Open the block menu" },
-  { key: "#, ##, ###", description: "Create headings" },
-  { key: `${MOD_KEY}K`, description: "Add a link" },
-  { key: `${MOD_KEY}click`, description: "Open a link" },
-  { key: IS_MAC ? "⌘⇧C" : "Ctrl+Shift+C", description: "Copy the doc as Markdown" },
-  { key: `${ALT_KEY}N`, description: "New doc" },
-  { key: `${ALT_KEY}W`, description: "Close doc" },
-  { key: `${ALT_KEY}[ / ]`, description: "Previous / next doc" },
-  { key: `${ALT_KEY}1–9`, description: "Jump to a doc" },
-  { key: `${ALT_KEY}↑ / ↓`, description: "Switch between alternatives" },
-  { key: `${ALT_KEY}↵`, description: "Add an alternative (with text selected), or show versions" },
-  { key: `${ALT_KEY}D`, description: "Dim or undim the selected text" },
-];
-
-const HELP_FEATURES = [
-  "Paste Markdown to turn it into rich text.",
-  "Select text, then click the small Aa button for formatting, links, and copy-as-Markdown.",
-  "A doc's tab is named after its first line.",
-  "Text with a dotted underline has other versions. Select text and use the bubble to add an alternative or dim it.",
 ];
 
 const wordFormatter = new Intl.NumberFormat();
@@ -87,8 +61,6 @@ export function Toolbar() {
   const undoClose = useEditorStore((state) => state.undoClose);
   const saveFailed = useEditorStore((state) => state.saveFailed);
   const agentStatus = useAgentBridge((state) => state.status);
-  const restoreInputRef = useRef<HTMLInputElement | null>(null);
-  const [backupStatus, setBackupStatus] = useState("");
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
 
@@ -152,24 +124,6 @@ export function Toolbar() {
   const handleCopyMarkdown = useCallback(async () => {
     const { editor } = useEditorStore.getState();
     if (editor) await copyDocAsMarkdown(editor);
-  }, []);
-
-  const downloadBackup = useCallback(() => {
-    const url = URL.createObjectURL(new Blob([exportBackup()], { type: "application/json" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `minimal-editor-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-  }, []);
-
-  const restoreBackup = useCallback(async (file: File) => {
-    try {
-      const count = useEditorStore.getState().importDocs(await file.text());
-      setBackupStatus(`Restored ${count} ${count === 1 ? "doc" : "docs"} as new tabs.`);
-    } catch {
-      setBackupStatus("That file isn't a Minimal Editor backup.");
-    }
   }, []);
 
   const tooltipFontClassName =
@@ -391,108 +345,7 @@ export function Toolbar() {
           </TooltipContent>
         </Tooltip>
 
-        <Popover>
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <PopoverTrigger
-                  render={
-                    <Button variant="ghost" size="icon-sm" aria-label="Help" />
-                  }
-                >
-                  <HugeiconsIcon
-                    icon={HelpCircleIcon}
-                    size={18}
-                    strokeWidth={1.5}
-                  />
-                </PopoverTrigger>
-              }
-            />
-            <TooltipContent className={tooltipFontClassName}>
-              Help
-            </TooltipContent>
-          </Tooltip>
-          <PopoverContent
-            className="max-h-[calc(100dvh-5rem)] w-[min(24rem,calc(100vw-1rem))] gap-3 overflow-y-auto p-3"
-            side="bottom"
-            align="end"
-          >
-            <PopoverHeader className="gap-1">
-              <PopoverTitle>Help</PopoverTitle>
-              <PopoverDescription>
-                A few useful rules, kept out of the way.
-              </PopoverDescription>
-            </PopoverHeader>
-
-            <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                Shortcuts
-              </p>
-              <div className="space-y-2">
-                {HELP_SHORTCUTS.map((item) => (
-                  <div
-                    key={item.key}
-                    className="flex items-start justify-between gap-3 text-sm"
-                  >
-                    <span className="text-foreground">{item.description}</span>
-                    <code className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                      {item.key}
-                    </code>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                Good to know
-              </p>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                {HELP_FEATURES.map((item) => (
-                  <p key={item}>{item}</p>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-                Your docs
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Docs autosave in this browser and nowhere else. Clearing your
-                browser&apos;s data deletes them, so download a backup now and then.
-              </p>
-              <div className="flex gap-1">
-                <Button variant="outline" size="sm" onClick={downloadBackup}>
-                  Download backup
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => restoreInputRef.current?.click()}
-                >
-                  Restore backup
-                </Button>
-                <input
-                  ref={restoreInputRef}
-                  type="file"
-                  accept="application/json,.json"
-                  className="hidden"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (file) restoreBackup(file);
-                    event.target.value = "";
-                  }}
-                />
-              </div>
-              {backupStatus ? (
-                <p role="status" className="text-sm text-muted-foreground">
-                  {backupStatus}
-                </p>
-              ) : null}
-            </div>
-          </PopoverContent>
-        </Popover>
+        <HelpDialog tooltipClassName={tooltipFontClassName} />
       </div>
 
       <div
