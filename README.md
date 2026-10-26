@@ -1,9 +1,16 @@
 # Minimal Editor
 
-A deliberately simple writing app built with Next.js, Tiptap, and Tailwind.
+A deliberately simple writing app. Try it at
+[editor.beckyschmidt.me](https://editor.beckyschmidt.me).
 
-Docs live in the browser. There are no files to open or save: every doc
-autosaves locally as you type, and you can keep several docs open as tabs.
+Docs live in your browser. There are no accounts, no server and no files to
+open or save: every doc autosaves locally as you type, and you can keep
+several docs open as tabs.
+
+Any word, sentence or paragraph can hold several versions you switch between
+in place and keep one of. An AI agent can add versions too, but the app has no
+AI built in: your own agent drives the page in your own browser (see
+[Working with an AI agent](#working-with-an-ai-agent)).
 
 ## Features
 
@@ -21,6 +28,8 @@ autosaves locally as you type, and you can keep several docs open as tabs.
 
 ## Shortcuts
 
+`Alt` is `Option` on a Mac.
+
 - `/` opens the block menu
 - `# `, `## `, `### ` create headings
 - `Cmd/Ctrl + K` adds a link
@@ -30,7 +39,7 @@ autosaves locally as you type, and you can keep several docs open as tabs.
 - `Alt + [` / `Alt + ]` previous / next doc
 - `Alt + 1–9` jump to a doc (`9` is the last one)
 - `Alt + ↑` / `Alt + ↓` switch between alternatives (cursor in the text)
-- `Alt + Enter` add an alternative to the selected text, or show or hide an alternative's versions
+- `Alt + Enter` add an alternative to the selected text, or show or hide the versions (all alternatives when the cursor isn't in one)
 - `Alt + D` dim or undim the selected text
 
 ## Alternatives
@@ -57,10 +66,39 @@ Alternatives sit inside one paragraph and are saved with the doc. Copying text
 copies what's on screen; copying or moving a whole alternative keeps its
 versions.
 
-### Suggesting alternatives from a browser agent
+## Working with an AI agent
 
-The app doesn't call any AI service. Instead, an agent driving the browser can
-use `window.minimalEditor` on the page:
+The app doesn't call any AI service. Instead, your own agent connects to the
+editor while you let it: it reads your doc and adds its suggestions as
+alternatives, which you review like any others.
+
+### Setup with Claude Code
+
+1. Add the helper (once):
+
+   ```bash
+   claude mcp add --scope user minimal-editor -- npx -y minimal-editor-mcp
+   ```
+
+2. Open the editor and click the robot button in the toolbar ("Connect
+   agent"). The first time, Chrome asks to let the site reach apps on your
+   device; allow it.
+3. Ask Claude to suggest edits to your draft.
+
+The connection only reaches the editor, and only while it's on. The helper
+([`mcp/`](mcp)) runs on your computer, accepts connections only from the
+editor's own address, and passes each request to the editor tab, which does
+the work. Your docs never go anywhere except to your agent. Click Disconnect
+(bottom left) or close the tab to end it.
+
+It works in desktop Chrome, Edge and Firefox. Safari doesn't let a website
+connect to an app on your computer. If you host your own copy, add its address
+with `MINIMAL_EDITOR_ORIGINS` (see [`mcp/README.md`](mcp/README.md)).
+
+### The API
+
+The page also exposes the same API as `window.minimalEditor`, for agents that
+already drive a browser:
 
 ```js
 minimalEditor.help()      // these instructions, for an agent that just found the hook
@@ -101,18 +139,33 @@ Each doc is stored in `localStorage` under its own key, so typing only rewrites
 the doc you're in. The app asks the browser to keep this storage persistent.
 Several open browser tabs stay in sync.
 
+Your docs exist only in that browser. Clearing site data, or using a private
+window, deletes them. Help → Download backup saves every doc, versions and
+all, as one file; Restore backup adds them back as new tabs. If the browser's
+storage fills up, the editor says so instead of silently not saving.
+
 ## Development
 
 ```bash
-npm run dev
+npm install
+npm run dev      # http://localhost:3000
 npm run lint
 npm run build    # static export to ./out
 ```
 
+The agent helper is its own small package in `mcp/`. To try a local copy with
+Claude Code:
+
+```bash
+cd mcp && npm install
+claude mcp add minimal-editor -- node "$PWD/index.js"
+```
+
 ## Deploy
 
-The app is a static export served by Cloudflare Workers static assets at
-`editor.beckyschmidt.me` (see `wrangler.jsonc`).
+The app is a static export (`./out`), so any static host works. The live copy
+is served by Cloudflare Workers static assets; to deploy your own, change the
+route in `wrangler.jsonc` to your domain.
 
 ```bash
 npm run preview  # build and serve locally with wrangler
@@ -127,3 +180,9 @@ npm run deploy   # build and deploy to Cloudflare
 - Zustand
 - Tailwind CSS 4
 - Cloudflare Workers
+
+The alternatives feature was inspired by Jason Fried's Write_On demo.
+
+## License
+
+[MIT](LICENSE)

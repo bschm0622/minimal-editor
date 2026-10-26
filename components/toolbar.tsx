@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
+  BotIcon,
   Copy01Icon,
   CenterFocusIcon,
   HelpCircleIcon,
@@ -13,7 +14,10 @@ import {
   TextFontIcon,
 } from "@hugeicons/core-free-icons";
 import { useShallow } from "zustand/react/shallow";
-import { useEditorStore, type EditorFont } from "@/lib/editor-store";
+import { startAgentBridge, stopAgentBridge, useAgentBridge } from "@/lib/agent-bridge";
+import { announce } from "@/lib/announce";
+import { exportBackup, useEditorStore, type EditorFont } from "@/lib/editor-store";
+import { ALT_KEY, IS_MAC, MOD_KEY } from "@/lib/utils";
 import {
   COPY_MARKDOWN_EVENT,
   copyDocAsMarkdown,
@@ -45,20 +49,19 @@ const FONT_OPTIONS: { value: EditorFont; label: string; sample: string }[] = [
 const HELP_SHORTCUTS = [
   { key: "/", description: "Open the block menu" },
   { key: "#, ##, ###", description: "Create headings" },
-  { key: "Cmd/Ctrl + K", description: "Add a link" },
-  { key: "Cmd/Ctrl + click", description: "Open a link" },
-  { key: "Cmd/Ctrl + Shift + C", description: "Copy the doc as Markdown" },
-  { key: "Alt + N", description: "New doc" },
-  { key: "Alt + W", description: "Close doc" },
-  { key: "Alt + [ / ]", description: "Previous / next doc" },
-  { key: "Alt + 1–9", description: "Jump to a doc" },
-  { key: "Alt + ↑ / ↓", description: "Switch between alternatives" },
-  { key: "Alt + Enter", description: "Add an alternative (with text selected), or show its versions" },
-  { key: "Alt + D", description: "Dim or undim the selected text" },
+  { key: `${MOD_KEY}K`, description: "Add a link" },
+  { key: `${MOD_KEY}click`, description: "Open a link" },
+  { key: IS_MAC ? "⌘⇧C" : "Ctrl+Shift+C", description: "Copy the doc as Markdown" },
+  { key: `${ALT_KEY}N`, description: "New doc" },
+  { key: `${ALT_KEY}W`, description: "Close doc" },
+  { key: `${ALT_KEY}[ / ]`, description: "Previous / next doc" },
+  { key: `${ALT_KEY}1–9`, description: "Jump to a doc" },
+  { key: `${ALT_KEY}↑ / ↓`, description: "Switch between alternatives" },
+  { key: `${ALT_KEY}↵`, description: "Add an alternative (with text selected), or show versions" },
+  { key: `${ALT_KEY}D`, description: "Dim or undim the selected text" },
 ];
 
 const HELP_FEATURES = [
-  "Every doc autosaves in this browser as you type.",
   "Paste Markdown to turn it into rich text.",
   "Select text, then click the small Aa button for formatting, links, and copy-as-Markdown.",
   "A doc's tab is named after its first line.",
@@ -82,6 +85,10 @@ export function Toolbar() {
   );
   const lastClosed = useEditorStore((state) => state.lastClosed);
   const undoClose = useEditorStore((state) => state.undoClose);
+  const saveFailed = useEditorStore((state) => state.saveFailed);
+  const agentStatus = useAgentBridge((state) => state.status);
+  const restoreInputRef = useRef<HTMLInputElement | null>(null);
+  const [backupStatus, setBackupStatus] = useState("");
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
 
@@ -110,6 +117,7 @@ export function Toolbar() {
   useEffect(() => {
     const handleCopy = () => {
       setShowCopyConfirmation(true);
+      announce("Copied as Markdown");
       const timeout = window.setTimeout(() => {
         setShowCopyConfirmation(false);
       }, 1200);
@@ -146,6 +154,24 @@ export function Toolbar() {
     if (editor) await copyDocAsMarkdown(editor);
   }, []);
 
+  const downloadBackup = useCallback(() => {
+    const url = URL.createObjectURL(new Blob([exportBackup()], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `minimal-editor-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, []);
+
+  const restoreBackup = useCallback(async (file: File) => {
+    try {
+      const count = useEditorStore.getState().importDocs(await file.text());
+      setBackupStatus(`Restored ${count} ${count === 1 ? "doc" : "docs"} as new tabs.`);
+    } catch {
+      setBackupStatus("That file isn't a Minimal Editor backup.");
+    }
+  }, []);
+
   const tooltipFontClassName =
     font === "editorial"
       ? "font-editorial"
@@ -160,6 +186,12 @@ export function Toolbar() {
       className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between bg-background px-4 py-3"
       onMouseEnter={() => setExpanded(true)}
       onMouseLeave={() => setExpanded(false)}
+      onFocus={() => setExpanded(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setExpanded(false);
+        }
+      }}
     >
       <div className="flex min-w-0 flex-1 items-center gap-3 pr-3">
         <button
@@ -190,7 +222,6 @@ export function Toolbar() {
         <DocTabs dimmed={!expanded} />
       </div>
 
-      {/* Action buttons */}
       <div
         className={`absolute right-4 top-1/2 flex items-center gap-1 rounded-xl border border-border bg-background/95 p-1.5 shadow-lg backdrop-blur-sm transition-all duration-200 sm:static sm:bg-background/80 sm:shadow-none ${
           expanded
@@ -198,10 +229,7 @@ export function Toolbar() {
             : "pointer-events-none translate-y-[-60%] opacity-0 sm:-translate-y-1"
         }`}
       >
-        <span
-          className="hidden px-2 text-xs tabular-nums text-muted-foreground sm:inline"
-          aria-live="polite"
-        >
+        <span className="hidden px-2 text-xs tabular-nums text-muted-foreground sm:inline">
           {wordFormatter.format(words)} {words === 1 ? "word" : "words"}
         </span>
 
@@ -241,9 +269,28 @@ export function Toolbar() {
           </TooltipContent>
         </Tooltip>
 
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={agentStatus === "off" ? startAgentBridge : stopAgentBridge}
+                aria-label={agentStatus === "off" ? "Connect agent" : "Disconnect agent"}
+                aria-pressed={agentStatus !== "off"}
+                className={agentStatus !== "off" ? "bg-accent" : ""}
+              />
+            }
+          >
+            <HugeiconsIcon icon={BotIcon} size={18} strokeWidth={1.5} />
+          </TooltipTrigger>
+          <TooltipContent className={tooltipFontClassName}>
+            {agentStatus === "off" ? "Connect agent" : "Disconnect agent"}
+          </TooltipContent>
+        </Tooltip>
+
         <Separator orientation="vertical" className="mx-1 h-5" />
 
-        {/* Font picker */}
         <Popover>
           <Tooltip>
             <TooltipTrigger
@@ -407,6 +454,43 @@ export function Toolbar() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                Your docs
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Docs autosave in this browser and nowhere else. Clearing your
+                browser&apos;s data deletes them, so download a backup now and then.
+              </p>
+              <div className="flex gap-1">
+                <Button variant="outline" size="sm" onClick={downloadBackup}>
+                  Download backup
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => restoreInputRef.current?.click()}
+                >
+                  Restore backup
+                </Button>
+                <input
+                  ref={restoreInputRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) restoreBackup(file);
+                    event.target.value = "";
+                  }}
+                />
+              </div>
+              {backupStatus ? (
+                <p role="status" className="text-sm text-muted-foreground">
+                  {backupStatus}
+                </p>
+              ) : null}
+            </div>
           </PopoverContent>
         </Popover>
       </div>
@@ -421,6 +505,30 @@ export function Toolbar() {
       >
         Copied as Markdown
       </div>
+
+      {saveFailed ? (
+        <div
+          role="alert"
+          className="fixed bottom-12 left-4 z-60 max-w-xs rounded-xl border border-destructive/40 bg-background px-3 py-2 text-sm text-destructive shadow-lg"
+        >
+          Not saved: this browser&apos;s storage is full. Download a backup from
+          Help, then close docs you don&apos;t need.
+        </div>
+      ) : null}
+
+      {agentStatus !== "off" ? (
+        <div className="fixed bottom-4 left-5 z-40 flex items-center gap-2 text-xs text-muted-foreground">
+          <span>{agentStatus === "connected" ? "Agent connected" : "Waiting for agent…"}</span>
+          <span aria-hidden>·</span>
+          <button
+            type="button"
+            onClick={stopAgentBridge}
+            className="transition-colors hover:text-foreground"
+          >
+            Disconnect
+          </button>
+        </div>
+      ) : null}
 
       {lastClosed ? (
         <div

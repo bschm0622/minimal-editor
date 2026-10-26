@@ -11,19 +11,19 @@ import {
   inlineToMarkdown,
   inlineToText,
   listAlternatives,
-  pruneFreshVersion,
   resolveAlternative,
   resolveAllAlternatives,
   showVariant,
   textToInline,
   updateAlternative,
-  useAlternativesUI,
   withoutVersion,
   withVersion,
   withVersionContent,
 } from "@/lib/alternatives";
+import { pruneFreshVersion, useAlternativesUI } from "@/lib/alternatives-ui";
+import { announce } from "@/lib/announce";
 import { useEditorStore } from "@/lib/editor-store";
-import { cn } from "@/lib/utils";
+import { cn, MOD_KEY } from "@/lib/utils";
 
 const FONT_CLASS = {
   sans: "font-sans",
@@ -31,11 +31,6 @@ const FONT_CLASS = {
   editorial: "font-editorial",
   mono: "font-mono",
 } as const;
-
-const MOD_KEY =
-  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform)
-    ? "⌘"
-    : "Ctrl+";
 
 interface Version {
   text: string;
@@ -48,7 +43,28 @@ interface Current {
   versions: Version[];
 }
 
-const EMPTY = { current: null, all: [], count: 0 };
+interface AtCursor {
+  id: string;
+  active: number;
+  count: number;
+  ai: boolean;
+  gap: boolean;
+}
+
+const EMPTY = { current: null, all: [], count: 0, at: null };
+
+function atCursor(editor: Editor): AtCursor | null {
+  const range = alternativeAt(editor.state);
+  return range
+    ? {
+        id: range.id,
+        active: range.active,
+        count: range.variants.length,
+        ai: range.ai[range.active],
+        gap: range.gap,
+      }
+    : null;
+}
 
 function useAlternativesState(editor: Editor | null, panelOpen: boolean) {
   return (
@@ -57,7 +73,9 @@ function useAlternativesState(editor: Editor | null, panelOpen: boolean) {
       selector: ({ editor: e }) => {
         if (!e) return EMPTY;
         // Closed, the panel only needs the count for its button.
-        if (!panelOpen) return { ...EMPTY, count: collectAlternatives(e.state.doc).length };
+        if (!panelOpen) {
+          return { ...EMPTY, count: collectAlternatives(e.state.doc).length, at: atCursor(e) };
+        }
         const all = listAlternatives(e.state);
         const at = alternativeAt(e.state);
         const range = at && all.find((r) => r.id === at.id);
@@ -73,6 +91,7 @@ function useAlternativesState(editor: Editor | null, panelOpen: boolean) {
           : null;
         return {
           current,
+          at: atCursor(e),
           count: all.length,
           all: all.map((r) => ({
             id: r.id,
@@ -164,10 +183,12 @@ function VersionLine({
     editor.commands.focus(null, { scrollIntoView: false });
   };
 
-  /** Drops a blank line added earlier, and says where this line ends up. */
+  /** Drops a blank line added earlier, and says where this line ends up (null: it was the one dropped). */
   const pruneOther = () => {
     const removed = pruneFreshVersion();
-    return removed && removed.index < index ? index - 1 : index;
+    if (removed?.id !== current.id) return index;
+    if (removed.index === index) return null;
+    return removed.index < index ? index - 1 : index;
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -181,20 +202,17 @@ function VersionLine({
       event.preventDefault();
       backToText();
     } else if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-      // Keep this version and go back to writing.
+      // Keep this version (or, on a blank line, the one on screen) and go back to writing.
       event.preventDefault();
       const at = pruneOther();
-      updateAlternative(editor, current.id, (attrs) => ({
-        ...attrs,
-        variants: [attrs.variants[at]],
-        ai: [false],
-      }));
+      resolveAlternative(editor, current.id, at ?? "shown");
       backToText();
     } else if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
       // An empty line is already a new version waiting to be typed.
       if (!textarea.value.trim()) return;
       const at = pruneOther();
+      if (at === null) return;
       updateAlternative(editor, current.id, (attrs) => ({
         ...withVersion(attrs, at + 1, []),
         active: attrs.active > at ? attrs.active + 1 : attrs.active,
@@ -246,7 +264,13 @@ function VersionLine({
           rows={1}
           value={draft ?? version.text.trim()}
           placeholder={index === 0 || fresh ? "" : "dimmed"}
-          aria-label={index === 0 ? "Original" : `Version ${index + 1}`}
+          aria-label={[
+            index === 0 ? "Original" : `Version ${index + 1}`,
+            active && "showing",
+            version.ai && "suggested by AI",
+          ]
+            .filter(Boolean)
+            .join(", ")}
           onFocus={handleFocus}
           onBlur={() => setDraft(null)}
           onChange={(event) => {
@@ -282,8 +306,24 @@ export function AlternativesPanel() {
   const font = useEditorStore((state) => state.font);
   const panelOpen = useAlternativesUI((state) => state.panelOpen);
   const { openPanel, closePanel } = useAlternativesUI.getState();
-  const { current, all, count } = useAlternativesState(editor, panelOpen);
+  const { current, all, count, at } = useAlternativesState(editor, panelOpen);
   const currentId = current?.id ?? null;
+
+  // Tell screen readers when the cursor reaches text with versions, and which one is showing.
+  useEffect(() => {
+    if (!at) return;
+    announce(
+      [
+        `Version ${at.active + 1} of ${at.count}`,
+        at.active === 0 && "the original",
+        at.ai && "suggested by AI",
+        at.gap && "dimmed",
+      ]
+        .filter(Boolean)
+        .join(", ")
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [at?.id, at?.active]);
 
   // Esc closes the panel wherever focus is; lines and the editor handle it first.
   useEffect(() => {
@@ -321,6 +361,8 @@ export function AlternativesPanel() {
   const jumpTo = (to: number) => {
     editor.chain().focus().setTextSelection(to).scrollIntoView().run();
   };
+
+  const backToText = () => editor.commands.focus(null, { scrollIntoView: false });
 
   return (
     <aside
@@ -365,15 +407,25 @@ export function AlternativesPanel() {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 text-xs">
         {current ? (
           <>
-            <QuietButton onClick={() => resolveAlternative(editor, current.id, "shown")}>
+            <QuietButton
+              onClick={() => {
+                resolveAlternative(editor, current.id, "shown");
+                backToText();
+              }}
+            >
               Keep
             </QuietButton>
             {current.active !== 0 ? (
-              <QuietButton onClick={() => resolveAlternative(editor, current.id, "original")}>
+              <QuietButton
+                onClick={() => {
+                  resolveAlternative(editor, current.id, "original");
+                  backToText();
+                }}
+              >
                 Use original
               </QuietButton>
             ) : null}
-            <span className="ml-auto text-muted-foreground/60">
+            <span className="ml-auto text-muted-foreground">
               ↵ adds · {MOD_KEY}↵ keeps · esc closes
             </span>
           </>
@@ -381,16 +433,33 @@ export function AlternativesPanel() {
           <>
             {all.length ? (
               <>
-                <QuietButton onClick={() => resolveAllAlternatives(editor, "shown")}>
+                <QuietButton
+                  onClick={() => {
+                    resolveAllAlternatives(editor, "shown");
+                    backToText();
+                  }}
+                >
                   Keep all
                 </QuietButton>
-                <QuietButton onClick={() => resolveAllAlternatives(editor, "original")}>
+                <QuietButton
+                  onClick={() => {
+                    resolveAllAlternatives(editor, "original");
+                    backToText();
+                  }}
+                >
                   Restore all
                 </QuietButton>
               </>
             ) : null}
             <span className="ml-auto">
-              <QuietButton onClick={closePanel}>Close</QuietButton>
+              <QuietButton
+                onClick={() => {
+                  closePanel();
+                  backToText();
+                }}
+              >
+                Close
+              </QuietButton>
             </span>
           </>
         )}

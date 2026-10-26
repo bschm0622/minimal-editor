@@ -22,12 +22,11 @@ export function DocTabs({ dimmed }: { dimmed: boolean }) {
     activeTabRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [activeId, docs.length]);
 
-  // A single doc needs no tabs; keep the page as quiet as before.
+  // A single doc needs no tabs.
   if (docs.length < 2) return null;
 
   return (
-    <div
-      role="tablist"
+    <nav
       aria-label="Documents"
       className={cn(
         "no-scrollbar flex min-w-0 items-center gap-0.5 overflow-x-auto transition-opacity duration-200",
@@ -54,8 +53,7 @@ export function DocTabs({ dimmed }: { dimmed: boolean }) {
           >
             <button
               type="button"
-              role="tab"
-              aria-selected={active}
+              aria-current={active ? "page" : undefined}
               title={label}
               onClick={() => switchDoc(doc.id)}
               className={cn(
@@ -79,6 +77,6 @@ export function DocTabs({ dimmed }: { dimmed: boolean }) {
           </div>
         );
       })}
-    </div>
+    </nav>
   );
 }

@@ -1,0 +1,33 @@
+{
+  "name": "minimal-editor-mcp",
+  "version": "0.1.0",
+  "description": "Lets an AI agent read your Minimal Editor docs and suggest edits, through a connection the editor opens on your own computer.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "minimal-editor-mcp": "index.js"
+  },
+  "files": [
+    "index.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bschm0622/minimal-editor.git",
+    "directory": "mcp"
+  },
+  "keywords": [
+    "mcp",
+    "editor",
+    "writing",
+    "claude"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "ws": "^8.22.0",
+    "zod": "^4.6.7"
+  }
+}

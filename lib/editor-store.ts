@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { Editor } from "@tiptap/core";
 import type { EditorState as ProseMirrorState } from "@tiptap/pm/state";
+import { welcomeHtml } from "./welcome";
 
 const LEGACY_CONTENT_KEY = "minimal-editor-content";
 const DOCS_KEY = "minimal-editor-docs";
@@ -35,6 +36,8 @@ interface EditorState {
   lastClosed: ClosedDoc | null;
   /** Bumped when another browser tab rewrites the active doc. */
   externalRevision: number;
+  /** The last save didn't fit in the browser's storage. */
+  saveFailed: boolean;
   focusMode: boolean;
   font: EditorFont;
   hydrated: boolean;
@@ -45,6 +48,7 @@ interface EditorState {
   closeDoc: (id: string) => void;
   undoClose: () => void;
   dismissUndoClose: () => void;
+  importDocs: (backup: string) => number;
   toggleFocusMode: () => void;
   setFont: (font: EditorFont) => void;
   hydrate: () => void;
@@ -69,7 +73,10 @@ function readStorage(key: string) {
 function writeStorage(key: string, value: string) {
   try {
     localStorage.setItem(key, value);
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function removeStorage(key: string) {
@@ -79,7 +86,7 @@ function removeStorage(key: string) {
 }
 
 function persistDocs(docs: Doc[]) {
-  writeStorage(DOCS_KEY, JSON.stringify(docs));
+  return writeStorage(DOCS_KEY, JSON.stringify(docs));
 }
 
 /** Fired on window (detail: doc id) once a doc is in the editor. */
@@ -115,6 +122,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   activeId: "",
   lastClosed: null,
   externalRevision: 0,
+  saveFailed: false,
   focusMode: false,
   font: "sans",
   hydrated: false,
@@ -207,6 +215,27 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   dismissUndoClose: () => set({ lastClosed: null }),
 
+  importDocs: (backup) => {
+    const data = JSON.parse(backup);
+    if (data?.app !== BACKUP_APP || !Array.isArray(data.docs)) {
+      throw new Error("That isn't a Minimal Editor backup.");
+    }
+    const imported: Doc[] = [];
+    for (const item of data.docs) {
+      if (typeof item?.html !== "string") continue;
+      const doc = { ...emptyDoc(), ...describeHtml(item.html) };
+      if (!writeStorage(DOC_CONTENT_PREFIX + doc.id, item.html)) {
+        set({ saveFailed: true });
+        break;
+      }
+      imported.push(doc);
+    }
+    const docs = [...get().docs, ...imported];
+    persistDocs(docs);
+    set({ docs });
+    return imported.length;
+  },
+
   setFont: (font) => {
     set({ font });
     writeStorage(FONT_KEY, font);
@@ -234,7 +263,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       docs = [doc];
     }
 
-    if (docs.length === 0) docs = [emptyDoc()];
+    // A first visit opens on a short welcome doc.
+    if (docs.length === 0) {
+      const html = welcomeHtml();
+      const doc = { ...emptyDoc(), ...describeHtml(html) };
+      writeStorage(DOC_CONTENT_PREFIX + doc.id, html);
+      docs = [doc];
+    }
     persistDocs(docs);
 
     const storedActive = readStorage(ACTIVE_DOC_KEY);
@@ -346,14 +381,38 @@ export function flushPendingSave() {
   const { docs } = useEditorStore.getState();
   if (!docs.some((d) => d.id === id)) return;
 
-  writeStorage(DOC_CONTENT_PREFIX + id, editor.isEmpty ? "" : editor.getHTML());
-
   const { title, words } = describeEditor(editor);
   const next = docs.map((d) =>
     d.id === id ? { ...d, title, words, updatedAt: Date.now() } : d
   );
-  persistDocs(next);
-  useEditorStore.setState({ docs: next });
+  const saved =
+    writeStorage(DOC_CONTENT_PREFIX + id, editor.isEmpty ? "" : editor.getHTML()) &&
+    persistDocs(next);
+  // Still unsaved: try again on the next edit, or when the tab is hidden.
+  if (!saved) pendingSave = { id, editor };
+  useEditorStore.setState({ docs: next, saveFailed: !saved });
+}
+
+const BACKUP_APP = "minimal-editor";
+
+/** Every doc as one JSON file, versions and all. */
+export function exportBackup() {
+  flushPendingSave();
+  const { docs } = useEditorStore.getState();
+  return JSON.stringify(
+    {
+      app: BACKUP_APP,
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      docs: docs.map((doc) => ({
+        title: docLabel(doc),
+        updatedAt: doc.updatedAt,
+        html: readDocContent(doc.id),
+      })),
+    },
+    null,
+    2
+  );
 }
 
 export function docLabel(doc: Doc) {

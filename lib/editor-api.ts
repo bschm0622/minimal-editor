@@ -51,7 +51,7 @@ function findText(doc: ProseMirrorNode, needle: string, occurrence: number) {
       }
     });
 
-    for (let i = text.indexOf(needle); i !== -1; i = text.indexOf(needle, i + 1)) {
+    for (let i = text.indexOf(needle); i !== -1; i = text.indexOf(needle, i + needle.length)) {
       count++;
       if (count === occurrence) {
         found = {
@@ -83,7 +83,7 @@ function insertBlocks(input: Insertion): AlternativeResult | { ok: true } {
   const anchor = input.after ?? input.before;
   if (anchor) {
     const { range } = findText(doc, anchor, 1);
-    if (!range) return { ok: false, error: "That text isn't in the doc. Copy it exactly from text()." };
+    if (!range) return { ok: false, error: "That text isn't in the doc. Copy it exactly from the doc's plain text." };
     const $at = doc.resolve(range.from);
     pos = input.after ? $at.after(1) : $at.before(1);
   }
@@ -119,7 +119,7 @@ function suggestOne(input: Suggestion): SuggestResult {
       matches: count,
       error: count
         ? `Only ${count} match${count === 1 ? "" : "es"} for that text.`
-        : "That text isn't in the doc. Copy it exactly from text().",
+        : "That text isn't in the doc. Copy it exactly from the doc's plain text.",
     };
   }
 
@@ -138,13 +138,15 @@ Read
   docs()            [{ id, title, open }]
   await open(id)    switch to a doc; resolves once it's loaded
   text()            open doc as plain text, one paragraph per block. Copy find strings from here.
+                    Line breaks and dimmed text show as "￼"; keep that character in find strings.
   read()            open doc as Markdown (shows whichever versions are on screen)
   list()            existing alternatives: [{ id, shown, versions: [original, ...], fromAi }]
 
 Draft
   insert({ markdown, after? | before? })
     Adds new paragraphs (Markdown, can be several) after or before the paragraph containing
-    the exact text given, or at the end. Only when the writer asked for drafted text.
+    the exact text given, or at the end. Inside a list, quote or table, they go after or
+    before the whole list, quote or table. Only when the writer asked for drafted text.
     To rewrite an existing paragraph, use suggest() with the whole paragraph as find instead.
 
 Suggest
@@ -162,7 +164,9 @@ Rules
   - Keep the writer's voice. Never keep or reject versions for them; they decide in the editor.
   - Don't overlap an existing alternative; suggesting on exactly its text adds versions to it.`;
 
-const api = {
+let cancelPendingOpen: (() => void) | null = null;
+
+export const editorApi = {
   /** How to use this hook, for an agent that just found it. */
   help() {
     return HELP;
@@ -186,6 +190,8 @@ const api = {
   },
   /** Switch docs. Resolves once the doc is in the editor, so suggest() can follow. */
   open(id: string): Promise<boolean> {
+    // A newer open() wins; the one before it resolves false straight away.
+    cancelPendingOpen?.();
     const store = useEditorStore.getState();
     if (!store.docs.some((d) => d.id === id)) return Promise.resolve(false);
     if (store.activeId === id) return Promise.resolve(true);
@@ -193,8 +199,10 @@ const api = {
       const done = (loaded: boolean) => {
         window.removeEventListener(DOC_LOADED_EVENT, onLoaded);
         clearTimeout(timeout);
+        cancelPendingOpen = null;
         resolve(loaded);
       };
+      cancelPendingOpen = () => done(false);
       const onLoaded = (event: Event) => {
         if ((event as CustomEvent<string>).detail === id) done(true);
       };
@@ -231,10 +239,10 @@ const api = {
 
 declare global {
   interface Window {
-    minimalEditor?: typeof api;
+    minimalEditor?: typeof editorApi;
   }
 }
 
 export function installEditorApi() {
-  window.minimalEditor = api;
+  window.minimalEditor = editorApi;
 }

@@ -25,7 +25,7 @@ import Suggestion, {
   type SuggestionKeyDownProps,
   type SuggestionOptions,
 } from "@tiptap/suggestion";
-import tippy, { type Instance as TippyInstance } from "tippy.js";
+import { autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom";
 import {
   forwardRef,
   useCallback,
@@ -353,7 +353,25 @@ const suggestion: Omit<SuggestionOptions<CommandItem, CommandItem>, "editor"> = 
   },
   render: () => {
     let component: ReactRenderer<CommandListRef> | null = null;
-    let popup: TippyInstance[] | null = null;
+    let getRect: (() => DOMRect | null) | null = null;
+    let stopUpdating: (() => void) | null = null;
+
+    const reference = {
+      getBoundingClientRect: () => getRect?.() ?? new DOMRect(),
+    };
+
+    const place = () => {
+      const menu = component?.element as HTMLElement | undefined;
+      if (!menu) return;
+      computePosition(reference, menu, {
+        strategy: "fixed",
+        placement: "bottom-start",
+        middleware: [offset(10), flip(), shift({ padding: 8 })],
+      }).then(({ x, y }) => {
+        menu.style.left = `${x}px`;
+        menu.style.top = `${y}px`;
+      });
+    };
 
     return {
       onStart: (props) => {
@@ -361,33 +379,28 @@ const suggestion: Omit<SuggestionOptions<CommandItem, CommandItem>, "editor"> = 
           props,
           editor: props.editor,
         });
+        getRect = props.clientRect ?? null;
 
-        if (!props.clientRect) return;
-
-        popup = tippy("body", {
-          getReferenceClientRect: props.clientRect as () => DOMRect,
-          appendTo: () => document.body,
-          content: component.element,
-          showOnCreate: true,
-          interactive: true,
-          trigger: "manual",
-          placement: "bottom-start",
-        });
+        const menu = component.element as HTMLElement;
+        menu.style.position = "fixed";
+        menu.style.zIndex = "50";
+        document.body.appendChild(menu);
+        stopUpdating = autoUpdate(
+          { ...reference, contextElement: props.editor.view.dom },
+          menu,
+          place
+        );
       },
 
       onUpdate(props) {
         component?.updateProps(props);
-
-        if (!props.clientRect) return;
-
-        popup?.[0]?.setProps({
-          getReferenceClientRect: props.clientRect as () => DOMRect,
-        });
+        getRect = props.clientRect ?? null;
+        place();
       },
 
       onKeyDown(props) {
         if (props.event.key === "Escape") {
-          popup?.[0]?.hide();
+          (component?.element as HTMLElement | undefined)?.style.setProperty("display", "none");
           return true;
         }
 
@@ -395,7 +408,8 @@ const suggestion: Omit<SuggestionOptions<CommandItem, CommandItem>, "editor"> = 
       },
 
       onExit() {
-        popup?.[0]?.destroy();
+        stopUpdating?.();
+        component?.element.remove();
         component?.destroy();
       },
     };

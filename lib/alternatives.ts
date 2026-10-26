@@ -13,10 +13,9 @@ import {
   PluginKey,
   TextSelection,
   type EditorState,
+  type Transaction,
 } from "@tiptap/pm/state";
 import { Decoration, DecorationSet } from "@tiptap/pm/view";
-import { create } from "zustand";
-import { onBeforeDocChange, useEditorStore } from "./editor-store";
 import { htmlToMarkdown, markdownToHtml } from "./markdown";
 
 /*
@@ -54,7 +53,15 @@ function createId() {
   return "alt-" + Math.random().toString(36).slice(2, 10);
 }
 
-function readAttrs(element: HTMLElement, idAttribute: string) {
+function isVersion(value: unknown): value is JSONContent[] {
+  return (
+    Array.isArray(value) &&
+    value.every((node) => typeof node === "object" && typeof node?.type === "string")
+  );
+}
+
+/** Attrs from saved or pasted HTML. Anything malformed is dropped, leaving plain text. */
+function readAttrs(element: HTMLElement, idAttribute: string, gap: boolean) {
   const id = element.getAttribute(idAttribute);
   if (!id) return false;
   try {
@@ -63,10 +70,12 @@ function readAttrs(element: HTMLElement, idAttribute: string) {
     if (
       !Array.isArray(variants) ||
       variants.length < 2 ||
-      !variants.every(Array.isArray) ||
+      !variants.every(isVersion) ||
       !Number.isInteger(active) ||
       active < 0 ||
-      active >= variants.length
+      active >= variants.length ||
+      // Dimmed text shows an empty version, and only dimmed text does.
+      gap !== !variants[active].length
     ) {
       return false;
     }
@@ -117,17 +126,16 @@ export function withoutVersion(attrs: AlternativeAttrs, index: number): Alternat
 export function withVersion(
   attrs: AlternativeAttrs,
   index: number,
-  content: JSONContent[],
-  ai = false
+  content: JSONContent[]
 ): AlternativeAttrs {
   const variants = attrs.variants.slice();
   const flags = attrs.ai.slice();
   variants.splice(index, 0, content);
-  flags.splice(index, 0, ai);
+  flags.splice(index, 0, false);
   return { ...attrs, variants, ai: flags, active: index };
 }
 
-/** A copy of `attrs` with version `index` rewritten by you. */
+/** A copy of `attrs` with version `index` rewritten by the writer, so no longer marked as AI's. */
 export function withVersionContent(
   attrs: AlternativeAttrs,
   index: number,
@@ -192,7 +200,7 @@ export function collectAlternatives(doc: ProseMirrorNode) {
   return ranges;
 }
 
-function findAlternative(doc: ProseMirrorNode, id: string) {
+export function findAlternative(doc: ProseMirrorNode, id: string) {
   return collectAlternatives(doc).find((range) => range.id === id) ?? null;
 }
 
@@ -208,26 +216,6 @@ export function alternativeAt(state: EditorState) {
   );
 }
 
-function stripAlternatives(fragment: Fragment, markType: MarkType): Fragment {
-  const nodes: ProseMirrorNode[] = [];
-  fragment.forEach((node) => {
-    if (node.type.name === GAP_NAME) return;
-    const marks = markType.removeFromSet(node.marks);
-    if (node.isText) {
-      nodes.push(node.mark(marks));
-    } else {
-      nodes.push(
-        node.type.create(
-          node.attrs,
-          stripAlternatives(node.content, markType),
-          marks
-        )
-      );
-    }
-  });
-  return Fragment.fromArray(nodes);
-}
-
 /** The text each alternative holds within a fragment. */
 function textById(fragment: Fragment) {
   const text = new Map<string, string>();
@@ -236,6 +224,13 @@ function textById(fragment: Fragment) {
     if (attrs) text.set(attrs.id, (text.get(attrs.id) ?? "") + node.text);
   });
   return text;
+}
+
+/** The text on screen for every alternative in the doc. */
+function liveTextById(doc: ProseMirrorNode) {
+  return new Map(
+    collectAlternatives(doc).map((r) => [r.id, doc.textBetween(r.from, r.to, "", "")])
+  );
 }
 
 /** Rewrites (or with `null`, removes) every alternative in a fragment. */
@@ -268,18 +263,24 @@ function mapAlternatives(
   return Fragment.fromArray(nodes);
 }
 
-function inlineToJSON(fragment: Fragment, markType: MarkType) {
+function inlineToJSON(fragment: Fragment, schema: Schema) {
   const json: JSONContent[] = [];
-  stripAlternatives(fragment, markType).forEach((node) => json.push(node.toJSON()));
+  mapAlternatives(fragment, schema, () => null).forEach((node) => json.push(node.toJSON()));
   return json;
 }
 
+/** A version's content, or its plain text if it isn't valid inline content. */
 function inlineFromJSON(schema: Schema, content: JSONContent[]) {
   try {
-    return Fragment.fromJSON(schema, content);
-  } catch {
-    return Fragment.from(schema.text(inlineToText(content) || " "));
-  }
+    const fragment = Fragment.fromJSON(schema, content);
+    let inline = true;
+    fragment.forEach((node) => {
+      if (!node.isInline) inline = false;
+    });
+    if (inline) return fragment;
+  } catch {}
+  const text = inlineToText(content);
+  return text ? Fragment.from(schema.text(text)) : Fragment.empty;
 }
 
 /** Every version, with the shown one read back from the doc (it may have been edited). */
@@ -292,7 +293,7 @@ function liveVariants(state: EditorState, range: AlternativeRange) {
     const start = $from.start();
     variants[range.active] = inlineToJSON(
       $from.parent.content.cut(range.from - start, range.to - start),
-      state.schema.marks[MARK_NAME]
+      state.schema
     );
   }
   return variants;
@@ -359,7 +360,7 @@ export function textToInline(schema: Schema, text: string): JSONContent[] {
     const parsed = ProseMirrorDOMParser.fromSchema(schema).parse(wrapper);
     const block = parsed.firstChild;
     if (block?.isTextblock && parsed.childCount === 1 && block.textContent) {
-      inner = inlineToJSON(block.content, schema.marks[MARK_NAME]);
+      inner = inlineToJSON(block.content, schema);
     }
   }
 
@@ -400,7 +401,6 @@ export function addAlternative(
   suggestions: JSONContent[][],
   options: {
     show?: "original" | "first";
-    allowDuplicate?: boolean;
     ai?: boolean;
     /** Put the cursor at the end of the new alternative. */
     select?: boolean;
@@ -408,7 +408,6 @@ export function addAlternative(
 ): AlternativeResult {
   const flag = options.ai ?? false;
   const { state } = editor;
-  const markType = state.schema.marks[MARK_NAME];
   const existing = collectAlternatives(state.doc).find(
     (r) => r.from === from && r.to === to
   );
@@ -416,9 +415,7 @@ export function addAlternative(
   let attrs: AlternativeAttrs;
   if (existing) {
     const variants = liveVariants(state, existing);
-    const fresh = suggestions.filter(
-      (s) => options.allowDuplicate || !variants.some((v) => sameContent(v, s))
-    );
+    const fresh = suggestions.filter((s) => !variants.some((v) => sameContent(v, s)));
     if (!fresh.length) return { ok: false, error: "Those versions are already there." };
     attrs = {
       id: existing.id,
@@ -438,13 +435,11 @@ export function addAlternative(
     const start = $from.start();
     const original = inlineToJSON(
       $from.parent.content.cut(from - start, to - start),
-      markType
+      state.schema
     );
     const fresh: JSONContent[][] = [];
     for (const s of suggestions) {
-      if (options.allowDuplicate || ![original, ...fresh].some((v) => sameContent(v, s))) {
-        fresh.push(s);
-      }
+      if (![original, ...fresh].some((v) => sameContent(v, s))) fresh.push(s);
     }
     if (!fresh.length) return { ok: false, error: "That's the same as the original." };
     attrs = {
@@ -462,6 +457,16 @@ export function addAlternative(
   }
   editor.view.dispatch(tr);
   return { ok: true, id: attrs.id };
+}
+
+/** Replaces from..to with plain content. Removing text doesn't leave two spaces behind. */
+function replaceWithPlain(tr: Transaction, from: number, to: number, content: Fragment) {
+  tr.replaceWith(from, to, content);
+  if (content.size) return;
+  const $at = tr.doc.resolve(from);
+  const after = $at.nodeAfter?.text?.[0];
+  const before = $at.nodeBefore ? $at.nodeBefore.text?.slice(-1) : " ";
+  if (after === " " && before === " ") tr.delete(from, from + 1);
 }
 
 /** Rebuilds an alternative after changing its versions or which one is shown. */
@@ -482,23 +487,18 @@ export function updateAlternative(
     ai: range.ai,
   });
   const tr = state.tr;
-
+  const content =
+    next.variants.length < 2
+      ? inlineFromJSON(state.schema, next.variants[0] ?? [])
+      : buildContent(state.schema, next);
   if (next.variants.length < 2) {
-    const content = inlineFromJSON(state.schema, next.variants[0] ?? []);
-    tr.replaceWith(range.from, range.to, content);
-    // Keeping a removal shouldn't leave two spaces where the text was.
-    const $at = tr.doc.resolve(range.from);
-    const after = $at.nodeAfter?.text?.[0];
-    const before = $at.nodeBefore ? $at.nodeBefore.text?.slice(-1) : " ";
-    if (!content.size && after === " " && before === " ") {
-      tr.delete(range.from, range.from + 1);
-    }
+    replaceWithPlain(tr, range.from, range.to, content);
   } else {
-    const content = buildContent(state.schema, next);
     tr.replaceWith(range.from, range.to, content);
-    if (options.moveCursor) {
-      tr.setSelection(TextSelection.create(tr.doc, range.from + content.size));
-    }
+  }
+  if (options.moveCursor) {
+    const end = Math.min(range.from + content.size, tr.doc.content.size);
+    tr.setSelection(TextSelection.near(tr.doc.resolve(end), -1));
   }
 
   editor.view.dispatch(tr.scrollIntoView());
@@ -522,13 +522,24 @@ export function cycleAlternative(editor: Editor, direction: 1 | -1) {
   return showVariant(editor, range.id, (range.active + direction + count) % count);
 }
 
-/** Ends an alternative, leaving either the shown version or the original as plain text. */
-export function resolveAlternative(editor: Editor, id: string, keep: "shown" | "original") {
-  return updateAlternative(editor, id, (attrs) => ({
-    ...attrs,
-    variants: [attrs.variants[keep === "shown" ? attrs.active : 0]],
-    ai: [false],
-  }));
+/**
+ * Ends an alternative, leaving one version as plain text: the one shown, the
+ * original, or a version by index. The cursor ends up after it.
+ */
+export function resolveAlternative(
+  editor: Editor,
+  id: string,
+  keep: "shown" | "original" | number
+) {
+  return updateAlternative(
+    editor,
+    id,
+    (attrs) => {
+      const index = keep === "shown" ? attrs.active : keep === "original" ? 0 : keep;
+      return { ...attrs, variants: [attrs.variants[index] ?? attrs.variants[attrs.active]], ai: [false] };
+    },
+    { moveCursor: true }
+  );
 }
 
 export function resolveAllAlternatives(editor: Editor, keep: "shown" | "original") {
@@ -538,7 +549,7 @@ export function resolveAllAlternatives(editor: Editor, keep: "shown" | "original
   for (const range of collectAlternatives(state.doc).reverse()) {
     const variants = liveVariants(state, range);
     const content = variants[keep === "shown" ? range.active : 0];
-    tr.replaceWith(range.from, range.to, inlineFromJSON(state.schema, content));
+    replaceWithPlain(tr, range.from, range.to, inlineFromJSON(state.schema, content));
   }
   if (tr.docChanged) editor.view.dispatch(tr);
 }
@@ -557,45 +568,50 @@ const alternativesPlugin = (markType: () => MarkType) =>
   new Plugin({
     key: pluginKey,
     // Pasting or a line break inside an alternative leaves it in two pieces
-    // in one paragraph: join them again. Splitting the paragraph leaves it in
-    // two paragraphs: only the first keeps it, so cycling never duplicates text.
+    // in one paragraph: join them again. If the pieces can't be joined (the
+    // paragraph was split, or another alternative landed in the middle), the
+    // alternative ends and its text stays as it is, so switching versions
+    // can never duplicate text. Undo brings it back.
     appendTransaction(transactions, _old, state) {
       if (!transactions.some((tr) => tr.docChanged)) return null;
-      const seen = new Set<string>();
-      const tr = state.tr;
+      const pieces = new Map<string, { block: number; range: AlternativeRange; ranges: AlternativeRange[] }[]>();
       state.doc.descendants((node, pos) => {
         if (!node.isTextblock) return true;
         const ranges = rangesInBlock(node, pos + 1);
-        const firstInBlock = new Map<string, AlternativeRange>();
         for (const range of ranges) {
-          if (!seen.has(range.id)) {
-            seen.add(range.id);
-            firstInBlock.set(range.id, range);
-            continue;
-          }
-          const first = firstInBlock.get(range.id);
-          const joinable =
-            first &&
-            !first.gap &&
-            !range.gap &&
-            !ranges.some((r) => r.id !== range.id && r.from >= first.to && r.to <= range.from);
-          if (first && joinable) {
-            const { id, active, variants, ai } = first;
-            tr.addMark(
-              tr.mapping.map(first.from),
-              tr.mapping.map(range.to),
-              markType().create({ id, active, variants, ai })
-            );
-            first.to = range.to;
-            continue;
-          }
+          const list = pieces.get(range.id) ?? [];
+          list.push({ block: pos, range, ranges });
+          pieces.set(range.id, list);
+        }
+        return false;
+      });
+
+      const tr = state.tr;
+      for (const [id, list] of pieces) {
+        if (list.length < 2) continue;
+        const first = list[0];
+        const last = list[list.length - 1];
+        const joinable =
+          list.every((piece) => piece.block === first.block && !piece.range.gap) &&
+          !first.ranges.some(
+            (r) => r.id !== id && r.from >= first.range.from && r.to <= last.range.to
+          );
+        if (joinable) {
+          const { active, variants, ai } = first.range;
+          tr.addMark(
+            tr.mapping.map(first.range.from),
+            tr.mapping.map(last.range.to),
+            markType().create({ id, active, variants, ai })
+          );
+          continue;
+        }
+        for (const { range } of list) {
           const from = tr.mapping.map(range.from);
           const to = tr.mapping.map(range.to);
           if (range.gap) tr.delete(from, to);
           else tr.removeMark(from, to, markType());
         }
-        return false;
-      });
+      }
       return tr.docChanged ? tr : null;
     },
     props: {
@@ -616,10 +632,10 @@ const alternativesPlugin = (markType: () => MarkType) =>
       transformCopied(slice, view) {
         const { state } = view;
         const copiedText = textById(slice.content);
+        const liveText = liveTextById(state.doc);
         const whole = new Map<string, AlternativeAttrs>();
         for (const range of collectAlternatives(state.doc)) {
-          const copied = copiedText.get(range.id);
-          if (copied !== undefined && copied === state.doc.textBetween(range.from, range.to, "", "")) {
+          if (copiedText.get(range.id) === liveText.get(range.id)) {
             whole.set(range.id, { ...range, variants: liveVariants(state, range) });
           }
         }
@@ -636,11 +652,8 @@ const alternativesPlugin = (markType: () => MarkType) =>
       // pasted inside an alternative picks up its mark from the cursor; that
       // isn't a copy, so it just becomes part of the alternative around it.
       transformPasted(slice, view) {
-        const { doc } = view.state;
         const pastedText = textById(slice.content);
-        const liveText = new Map(
-          collectAlternatives(doc).map((r) => [r.id, doc.textBetween(r.from, r.to, "", "")])
-        );
+        const liveText = liveTextById(view.state.doc);
         const ids = new Map<string, string>();
         return new Slice(
           mapAlternatives(slice.content, view.state.schema, (attrs, gap) => {
@@ -670,7 +683,7 @@ export const AlternativeMark = Mark.create({
     return [
       {
         tag: "span[data-alternative]",
-        getAttrs: (element) => readAttrs(element, "data-alternative"),
+        getAttrs: (element) => readAttrs(element, "data-alternative", false),
       },
     ];
   },
@@ -682,39 +695,6 @@ export const AlternativeMark = Mark.create({
       { class: "alt", "data-alternative": attrs.id, ...renderAttrs(attrs) },
       0,
     ];
-  },
-
-  addKeyboardShortcuts() {
-    return {
-      "Alt-ArrowUp": () => cycleAlternative(this.editor, -1),
-      "Alt-ArrowDown": () => cycleAlternative(this.editor, 1),
-      "Alt-Enter": () => {
-        const ui = useAlternativesUI.getState();
-        if (ui.panelOpen) {
-          ui.closePanel();
-          return true;
-        }
-        // With text selected: make it an alternative and type the new version.
-        const { state } = this.editor;
-        const { from, to, empty } = state.selection;
-        if (!empty && canAddAlternative(state, from, to)) {
-          return startAlternativeFromSelection(this.editor).ok;
-        }
-        const id = alternativeInSelection(state);
-        return id ? showVersions(this.editor, id) : false;
-      },
-      // ProseMirror's Mac keymap binds Option+D to delete; here it dims instead,
-      // and never deletes.
-      "Alt-d": () => {
-        toggleDim(this.editor);
-        return true;
-      },
-      Escape: () => {
-        if (!useAlternativesUI.getState().panelOpen) return false;
-        useAlternativesUI.getState().closePanel();
-        return true;
-      },
-    };
   },
 
   addProseMirrorPlugins() {
@@ -739,7 +719,7 @@ export const AlternativeGap = Node.create({
     return [
       {
         tag: "span[data-alternative-gap]",
-        getAttrs: (element) => readAttrs(element, "data-alternative-gap"),
+        getAttrs: (element) => readAttrs(element, "data-alternative-gap", true),
       },
     ];
   },
@@ -763,70 +743,6 @@ export const AlternativeGap = Node.create({
   },
 });
 
-interface PanelFocus {
-  id: string;
-  index: number;
-  /** Where the cursor goes in the version's text, or select all of it. */
-  caret?: "start" | "end" | "all";
-}
-
-interface AlternativesUIState {
-  panelOpen: boolean;
-  /** A version the panel should put the cursor in once it renders. */
-  focus: PanelFocus | null;
-  /** A version added from the panel, dropped if it's left empty or unchanged. */
-  fresh: { id: string; index: number } | null;
-  openPanel: (focus?: PanelFocus) => void;
-  closePanel: () => void;
-  setFocus: (focus: PanelFocus | null) => void;
-  setFresh: (fresh: AlternativesUIState["fresh"]) => void;
-}
-
-export const useAlternativesUI = create<AlternativesUIState>((set) => ({
-  panelOpen: false,
-  focus: null,
-  fresh: null,
-  openPanel: (focus) => set({ panelOpen: true, focus: focus ?? null }),
-  closePanel: () => {
-    pruneFreshVersion();
-    set({ panelOpen: false, focus: null });
-  },
-  setFocus: (focus) => set({ focus }),
-  setFresh: (fresh) => set({ fresh }),
-}));
-
-/** Drops the version just added in the panel if it was left empty or the same as the original. */
-export function pruneFreshVersion(): { id: string; index: number } | null {
-  const { fresh } = useAlternativesUI.getState();
-  const { editor } = useEditorStore.getState();
-  if (!fresh) return null;
-  useAlternativesUI.setState({ fresh: null });
-  if (!editor || editor.isDestroyed) return null;
-  const range = listAlternatives(editor.state).find((r) => r.id === fresh.id);
-  const content = range?.variants[fresh.index];
-  if (content && (!content.length || inlineToText(content) === inlineToText(range.variants[0]))) {
-    updateAlternative(editor, fresh.id, (attrs) => withoutVersion(attrs, fresh.index));
-    return fresh;
-  }
-  return null;
-}
-
-// Tidy up before another doc opens, while edits still save to this one.
-onBeforeDocChange(() => useAlternativesUI.getState().closePanel());
-
-/** Makes the selection an alternative and opens a blank line in the panel for the new version. */
-export function startAlternativeFromSelection(editor: Editor) {
-  const { from, to } = editor.state.selection;
-  // The blank version stays out of sight until it has text, and is dropped if it never does.
-  const result = addAlternative(editor, { from, to }, [[]], { show: "original", select: true });
-  if (result.ok) {
-    const ui = useAlternativesUI.getState();
-    ui.setFresh({ id: result.id, index: 1 });
-    ui.openPanel({ id: result.id, index: 1 });
-  }
-  return result;
-}
-
 /** The first alternative the selection touches, or the one the cursor is in. */
 export function alternativeInSelection(state: EditorState) {
   const { from, to } = state.selection;
@@ -835,15 +751,6 @@ export function alternativeInSelection(state: EditorState) {
     id ??= attrsOf(node)?.id ?? null;
   });
   return id ?? alternativeAt(state)?.id ?? null;
-}
-
-/** Opens the panel on an alternative, moving the cursor into it so the panel follows. */
-export function showVersions(editor: Editor, id: string) {
-  const range = collectAlternatives(editor.state.doc).find((r) => r.id === id);
-  if (!range) return false;
-  editor.commands.setTextSelection(range.to);
-  useAlternativesUI.getState().openPanel({ id, index: range.active });
-  return true;
 }
 
 /** Ids of dimmed alternatives (removals on screen) inside the selection. */

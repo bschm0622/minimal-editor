@@ -47,6 +47,7 @@ import {
 import { useEditorKeyboardShortcuts } from "@/lib/use-editor-keyboard-shortcuts";
 import { cn } from "@/lib/utils";
 import { AlternativeGap, AlternativeMark } from "@/lib/alternatives";
+import { AlternativeShortcuts } from "@/lib/alternatives-ui";
 import { EditorBubbleMenu } from "./editor-bubble-menu";
 import { SlashCommands } from "./slash-command";
 
@@ -182,10 +183,14 @@ export function EditorSurface({
       SlashCommands,
       AlternativeMark,
       AlternativeGap,
+      AlternativeShortcuts,
     ],
     content: "",
     editorProps: {
       attributes: {
+        role: "textbox",
+        "aria-multiline": "true",
+        "aria-label": "Document",
         class: cn(
           "tiptap-editor prose prose-neutral dark:prose-invert max-w-none outline-none min-h-[calc(100vh-8rem)] px-5 pt-8 sm:px-6",
           contentClassName

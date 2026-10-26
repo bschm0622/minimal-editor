@@ -30,7 +30,10 @@ export function useEditorKeyboardShortcuts(
 
       // Doc shortcuts use Alt + physical key so they work on macOS, where
       // Option changes the typed character, and don't fight browser tab keys.
-      if (event.altKey && !mod) {
+      // Not in text fields or with Shift, where Option types characters.
+      const inField =
+        event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
+      if (event.altKey && !mod && !event.shiftKey && !inField) {
         const store = useEditorStore.getState();
 
         if (event.code === "KeyN") {

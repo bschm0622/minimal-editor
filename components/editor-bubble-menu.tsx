@@ -62,10 +62,11 @@ import {
   canAddAlternative,
   dimmedInSelection,
   dimSelection,
-  showVersions,
-  startAlternativeFromSelection,
   undim,
 } from "@/lib/alternatives";
+import { showVersions, startAlternativeFromSelection } from "@/lib/alternatives-ui";
+import { announce } from "@/lib/announce";
+import { ALT_KEY, MOD_KEY } from "@/lib/utils";
 
 function normalizeLinkUrl(value: string) {
   const trimmed = value.trim();
@@ -121,11 +122,6 @@ function getWordRangeAtCursor(state: EditorState) {
 
   return { from: $from.start() + start, to: $from.start() + end };
 }
-
-const MOD_KEY =
-  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform)
-    ? "⌘"
-    : "Ctrl+";
 
 function MenuTooltip({
   label,
@@ -475,12 +471,14 @@ export function EditorBubbleMenu({
     }
 
     setShowCopyConfirmation(true);
+    announce("Copied as Markdown");
   }, [editor]);
 
   const copyLinkUrl = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(activeLinkUrl);
       setShowCopyConfirmation(true);
+      announce("Copied link");
     } catch {
       // Clipboard access can be denied; nothing useful to show.
     }
@@ -545,6 +543,7 @@ export function EditorBubbleMenu({
         updateDelay={0}
         shouldShow={shouldShowMenu}
         options={bubbleMenuOptions}
+        tabIndex={-1}
         className={
           menuMode === "handle"
             ? "z-[60] flex items-center gap-0.5 rounded-full border border-border bg-background p-0.5 shadow-md"
@@ -714,7 +713,7 @@ export function EditorBubbleMenu({
               </Button>
             </MenuTooltip>
             {editorState?.canAddAlternative ? (
-              <MenuTooltip label="Add alternative" shortcut="⌥↵">
+              <MenuTooltip label="Add alternative" shortcut={`${ALT_KEY}↵`}>
                 <Button
                   size="icon-sm"
                   variant="ghost"
@@ -727,7 +726,7 @@ export function EditorBubbleMenu({
               </MenuTooltip>
             ) : null}
             {editorState?.canAddAlternative ? (
-              <MenuTooltip label="Dim" shortcut="⌥D">
+              <MenuTooltip label="Dim" shortcut={`${ALT_KEY}D`}>
                 <Button
                   size="icon-sm"
                   variant="ghost"
@@ -740,7 +739,7 @@ export function EditorBubbleMenu({
               </MenuTooltip>
             ) : null}
             {editorState?.selectedAlternative ? (
-              <MenuTooltip label="Show versions" shortcut="⌥↵">
+              <MenuTooltip label="Show versions" shortcut={`${ALT_KEY}↵`}>
                 <Button
                   size="icon-sm"
                   variant="ghost"
@@ -753,7 +752,7 @@ export function EditorBubbleMenu({
               </MenuTooltip>
             ) : null}
             {editorState?.hasDimmed ? (
-              <MenuTooltip label="Undim" shortcut="⌥D">
+              <MenuTooltip label="Undim" shortcut={`${ALT_KEY}D`}>
                 <Button
                   size="icon-sm"
                   variant="ghost"
