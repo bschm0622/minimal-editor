@@ -22,7 +22,7 @@ import {
 import { pruneFreshVersion, useAlternativesUI } from "@/lib/alternatives-ui";
 import { announce } from "@/lib/announce";
 import { useEditorStore } from "@/lib/editor-store";
-import { ALT_KEY, cn, MOD_KEY } from "@/lib/utils";
+import { ALT_KEY, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const FONT_CLASS = {
@@ -247,7 +247,6 @@ function VersionLine({
     }
   };
 
-  const removed = !version.text.trim();
   const fresh = useAlternativesUI(
     (state) => state.fresh?.id === current.id && state.fresh.index === index
   );
@@ -276,11 +275,8 @@ function VersionLine({
           }}
           onKeyDown={handleKeyDown}
           className={cn(
-            "field-sizing-content block w-full resize-none bg-transparent leading-5 outline-none placeholder:italic",
-            active
-              ? "text-foreground placeholder:text-foreground/70"
-              : "text-muted-foreground placeholder:text-muted-foreground",
-            removed && draft === null && "italic"
+            "field-sizing-content block w-full resize-none bg-transparent leading-5 outline-none placeholder:text-muted-foreground",
+            active ? "text-foreground" : "text-muted-foreground"
           )}
         />
       </div>
@@ -288,24 +284,12 @@ function VersionLine({
   );
 }
 
-function QuietButton({
-  children,
-  primary,
-  onClick,
-}: {
-  children: string;
-  /** The likely next step: a shade stronger than the rest. */
-  primary?: boolean;
-  onClick: () => void;
-}) {
+function QuietButton({ children, onClick }: { children: string; onClick: () => void }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={cn(
-        "-mx-1 rounded-md px-1 py-0.5 font-medium transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
-        primary ? "text-foreground/85" : "text-muted-foreground"
-      )}
+      className="-mx-1 rounded-md px-1 py-0.5 text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
     >
       {children}
     </button>
@@ -366,27 +350,22 @@ export function AlternativesPanel() {
 
   return (
     <aside
-      className={cn(
-        "fixed top-14 right-0 bottom-0 z-40 flex w-full flex-col bg-background px-5 pt-3 pb-4 text-sm sm:w-72"
-      )}
+      className="fixed top-16 right-4 z-40 flex max-h-[calc(100dvh-5rem)] w-[calc(100%-2rem)] flex-col rounded-2xl border border-border bg-popover text-sm shadow-lg sm:w-68"
       aria-label="Alternatives"
     >
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-xs text-muted-foreground">{current ? "Versions" : "Alternatives"}</h2>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label="Close"
-          className="-mr-1.5 text-muted-foreground"
-          onClick={() => {
-            closePanel();
-            backToText();
-          }}
-        >
-          <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
-        </Button>
-      </div>
-      <div className={cn("flex-1 overflow-y-auto", FONT_CLASS[font])}>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        aria-label="Close"
+        className="absolute top-2.5 right-2.5 text-muted-foreground"
+        onClick={() => {
+          closePanel();
+          backToText();
+        }}
+      >
+        <HugeiconsIcon icon={Cancel01Icon} size={14} strokeWidth={2} />
+      </Button>
+      <div className={cn("overflow-y-auto py-3.5 pr-10 pl-4", FONT_CLASS[font])}>
         {current ? (
           <ul key={current.id} className="flex flex-col gap-2.5">
             {current.versions.map((_, index) => (
@@ -401,10 +380,7 @@ export function AlternativesPanel() {
                 <button
                   type="button"
                   onClick={() => jumpTo(item.to)}
-                  className={cn(
-                    "min-w-0 flex-1 truncate rounded-sm text-left leading-5 text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50",
-                    item.dimmed && "italic"
-                  )}
+                  className="min-w-0 flex-1 truncate rounded-sm text-left leading-5 text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
                 >
                   {item.label}
                 </button>
@@ -418,58 +394,55 @@ export function AlternativesPanel() {
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-3 text-xs">
-        {current ? (
-          <>
-            <QuietButton
-              primary
-              onClick={() => {
-                resolveAlternative(editor, current.id, "shown");
-                backToText();
-              }}
-            >
-              Keep
-            </QuietButton>
-            {current.active !== 0 ? (
+      {current || all.length ? (
+        <div className="flex items-center gap-3 border-t border-border px-4 py-2.5 text-xs">
+          {current ? (
+            <>
               <QuietButton
                 onClick={() => {
-                  resolveAlternative(editor, current.id, "original");
+                  resolveAlternative(editor, current.id, "shown");
                   backToText();
                 }}
               >
-                Use original
+                Keep
               </QuietButton>
-            ) : null}
-            <span className="ml-auto text-muted-foreground">
-              ↵ adds · {MOD_KEY}↵ keeps
-            </span>
-          </>
-        ) : (
-          <>
-            {all.length ? (
-              <>
+              {current.active !== 0 ? (
                 <QuietButton
-                  primary
                   onClick={() => {
-                    resolveAllAlternatives(editor, "shown");
+                    resolveAlternative(editor, current.id, "original");
                     backToText();
                   }}
                 >
-                  Keep all
+                  Use original
                 </QuietButton>
-                <QuietButton
-                  onClick={() => {
-                    resolveAllAlternatives(editor, "original");
-                    backToText();
-                  }}
-                >
-                  Use originals
-                </QuietButton>
-              </>
-            ) : null}
-          </>
-        )}
-      </div>
+              ) : null}
+            </>
+          ) : (
+            <>
+              {all.length ? (
+                <>
+                  <QuietButton
+                    onClick={() => {
+                      resolveAllAlternatives(editor, "shown");
+                      backToText();
+                    }}
+                  >
+                    Keep all
+                  </QuietButton>
+                  <QuietButton
+                    onClick={() => {
+                      resolveAllAlternatives(editor, "original");
+                      backToText();
+                    }}
+                  >
+                    Use originals
+                  </QuietButton>
+                </>
+              ) : null}
+            </>
+          )}
+        </div>
+      ) : null}
     </aside>
   );
 }
