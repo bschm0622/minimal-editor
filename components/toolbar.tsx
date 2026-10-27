@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Add01Icon,
-  BotIcon,
+  AiEditingIcon,
   Copy01Icon,
   Tick02Icon,
   CenterFocusIcon,
@@ -391,7 +391,7 @@ export function Toolbar() {
             />
           }
         >
-          <HugeiconsIcon icon={BotIcon} size={16} strokeWidth={1.5} />
+          <HugeiconsIcon icon={AiEditingIcon} size={16} strokeWidth={1.5} />
           {agentStatus !== "off" ? (
             <span
               aria-hidden

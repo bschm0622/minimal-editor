@@ -516,10 +516,18 @@
 .tiptap .alt-count > span {
   position: absolute;
   left: calc(100% + 1.25rem);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2em;
   font-size: 0.75em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   color: var(--muted-foreground);
+}
+
+.tiptap .alt-count svg {
+  width: 1.1em;
+  height: 1.1em;
 }
 
 .tiptap .alt-current,

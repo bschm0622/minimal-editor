@@ -92,7 +92,7 @@ alternatives, which you review like any others.
    [editor.beckyschmidt.me](https://editor.beckyschmidt.me) connects to the
    helper on your computer.
 
-2. Open the editor and click the robot button in the toolbar ("Connect
+2. Open the editor and click the agent button in the toolbar (a pencil with a sparkle, "Connect
    agent"). The first time, Chrome asks to let the site reach apps on your
    device; allow it.
 3. In Claude Code, type `/mcp__minimal-editor__edit`, optionally followed by
@@ -102,7 +102,7 @@ alternatives, which you review like any others.
 The connection only reaches the editor, and only while it's on. The helper
 ([`mcp/`](mcp)) runs on your computer, accepts connections only from the
 editor's own address, and passes each request to the editor tab, which does
-the work. Your docs never go anywhere except to your agent. Click the robot
+the work. Your docs never go anywhere except to your agent. Click the agent button
 button again or close the tab to end it.
 
 It works in desktop Chrome, Edge and Firefox. Safari doesn't let a website

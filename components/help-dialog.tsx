@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BotIcon, HelpCircleIcon } from "@hugeicons/core-free-icons";
+import { AiEditingIcon, HelpCircleIcon } from "@hugeicons/core-free-icons";
 import { exportBackup, useEditorStore } from "@/lib/editor-store";
 import { ALT_KEY, IS_MAC, MOD_KEY } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -178,11 +178,11 @@ export function HelpDialog({ triggerClassName }: { triggerClassName?: string }) 
             </a>{" "}
             from the repo, click{" "}
             <HugeiconsIcon
-              icon={BotIcon}
+              icon={AiEditingIcon}
               size={14}
               strokeWidth={1.5}
               className="inline align-[-2px]"
-              aria-label="the robot button"
+              aria-label="the agent button"
             />{" "}
             in the toolbar to connect. The agent can only reach this editor, and
             only while it&apos;s connected.

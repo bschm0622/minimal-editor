@@ -1,3 +1,4 @@
+import { AiEditingIcon } from "@hugeicons/core-free-icons";
 import { Mark, Node, type Editor, type JSONContent } from "@tiptap/core";
 import {
   DOMParser as ProseMirrorDOMParser,
@@ -591,12 +592,30 @@ export function listAlternatives(state: EditorState) {
 
 const pluginKey = new PluginKey("alternatives");
 
+/** The agent mark (the app's agent button icon) as an SVG element, for the margin. */
+function agentIcon() {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  for (const [tag, attrs] of AiEditingIcon as unknown as [string, Record<string, string>][]) {
+    const el = document.createElementNS(ns, tag);
+    for (const [name, value] of Object.entries(attrs)) {
+      if (name !== "key") el.setAttribute(name.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase()), value);
+    }
+    el.setAttribute("stroke-width", "2");
+    svg.appendChild(el);
+  }
+  return svg;
+}
+
 /**
  * "2/3" beside the alternative the cursor is in: which version is showing, of
- * how many. "AI 2/3" when that version came from an agent.
+ * how many, after the agent mark when that version came from an agent.
  */
 function positionWidget(range: AlternativeRange) {
-  const label = `${range.ai[range.active] ? "AI " : ""}${range.active + 1}/${range.variants.length}`;
+  const ai = range.ai[range.active];
+  const label = `${range.active + 1}/${range.variants.length}`;
   return Decoration.widget(
     range.to,
     () => {
@@ -604,11 +623,12 @@ function positionWidget(range: AlternativeRange) {
       anchor.className = "alt-count";
       anchor.setAttribute("aria-hidden", "true");
       const text = document.createElement("span");
-      text.textContent = label;
+      if (ai) text.appendChild(agentIcon());
+      text.append(label);
       anchor.appendChild(text);
       return anchor;
     },
-    { side: -1, marks: [], ignoreSelection: true, key: `${range.id}-${label}` }
+    { side: -1, marks: [], ignoreSelection: true, key: `${range.id}-${label}-${ai}` }
   );
 }
 

@@ -19,7 +19,7 @@ cd mcp && npm install
 claude mcp add --scope user minimal-editor -- node "$(pwd)/index.js"
 ```
 
-Then open the editor, click the robot button in the toolbar, and in Claude
+Then open the editor, click the agent button in the toolbar (a pencil with a sparkle), and in Claude
 Code type `/mcp__minimal-editor__edit` (optionally followed by what you want,
 like "tighten the intro"). Asking in your own words works too, as long as you
 name the editor: "suggest edits to my draft in Minimal Editor".
