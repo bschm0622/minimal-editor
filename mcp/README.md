@@ -44,8 +44,9 @@ name the editor: "suggest edits to my draft in Minimal Editor".
 - `MINIMAL_EDITOR_PORT`: the local port (default `47615`). The editor connects
   to the default, so only change it if you also change the editor.
 
-Only one agent session holds the connection at a time; a second one waits and
-takes over when the first exits.
+Only one agent session holds the connection at a time. Whichever session last
+used an editor tool gets it: the session holding it steps aside, and the editor
+tab reconnects to the new one in about a second.
 
 ## License
 

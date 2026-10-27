@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { WebSocketServer } from "ws";
+import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
 
 /*
@@ -21,9 +21,15 @@ const ORIGINS = [
 ];
 const LOCAL_ORIGIN = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 const CALL_TIMEOUT_MS = 20_000;
+/** Another session asks the one holding the port to step aside here. */
+const HANDOFF_PATH = "/handoff";
+/** Sent to the editor tab when another session takes over; the tab reconnects to it. */
+const HANDED_OFF_CODE = 4001;
 
 let page = null;
 let listening = false;
+let retryTimer = null;
+let takingOver = null;
 let nextId = 1;
 const pending = new Map();
 
@@ -32,70 +38,129 @@ function log(...args) {
   console.error("[minimal-editor-mcp]", ...args);
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Resolves true once this session holds the port, false if another one does. */
 function listen() {
-  const server = new WebSocketServer({
-    host: "127.0.0.1",
-    port: PORT,
-    // Browsers always send Origin, and pages can't fake it: only the editor gets in.
-    verifyClient: ({ origin }) => ORIGINS.includes(origin) || LOCAL_ORIGIN.test(origin),
-  });
-
-  server.on("listening", () => {
-    listening = true;
-    log(`waiting for the editor on 127.0.0.1:${PORT}`);
-  });
-
-  server.on("error", (error) => {
-    if (error.code === "EADDRINUSE") {
-      // Another session has the editor. Take over once it exits.
-      setTimeout(listen, 3000);
-    } else {
-      log(error.message);
-    }
-  });
-
-  server.on("connection", (socket) => {
-    // One editor tab at a time; the newest one wins.
-    page?.close(4000, "Connected in another tab");
-    page = socket;
-    log("editor connected");
-
-    socket.on("message", (data) => {
-      let message;
-      try {
-        message = JSON.parse(String(data));
-      } catch {
-        return;
-      }
-      const call = pending.get(message.id);
-      if (!call) return;
-      pending.delete(message.id);
-      clearTimeout(call.timer);
-      if (message.error) call.reject(new Error(message.error));
-      else call.resolve(message.result);
+  clearTimeout(retryTimer);
+  return new Promise((resolve) => {
+    const server = new WebSocketServer({
+      host: "127.0.0.1",
+      port: PORT,
+      // Browsers always send Origin, and pages can't fake it: only the editor gets in,
+      // and only other sessions (no Origin) can ask for a handoff.
+      verifyClient: ({ origin, req }) =>
+        req.url === HANDOFF_PATH
+          ? !origin
+          : ORIGINS.includes(origin) || LOCAL_ORIGIN.test(origin),
     });
 
-    socket.on("close", () => {
-      if (page !== socket) return;
-      page = null;
-      log("editor disconnected");
-      for (const [id, call] of pending) {
-        pending.delete(id);
-        clearTimeout(call.timer);
-        call.reject(new Error("The editor disconnected."));
+    server.on("listening", () => {
+      listening = true;
+      log(`waiting for the editor on 127.0.0.1:${PORT}`);
+      resolve(true);
+    });
+
+    server.on("error", (error) => {
+      if (error.code === "EADDRINUSE") {
+        // Another session has the editor. Take over once it exits, or when this one needs it.
+        retryTimer = setTimeout(listen, 3000);
+      } else {
+        log(error.message);
       }
+      resolve(false);
+    });
+
+    server.on("connection", (socket, req) => {
+      if (req.url === HANDOFF_PATH) handOff(server, socket);
+      else attach(socket);
     });
   });
 }
 
-function callEditor(method, params = {}) {
+function attach(socket) {
+  // One editor tab at a time; the newest one wins.
+  page?.close(4000, "Connected in another tab");
+  page = socket;
+  log("editor connected");
+
+  socket.on("message", (data) => {
+    let message;
+    try {
+      message = JSON.parse(String(data));
+    } catch {
+      return;
+    }
+    const call = pending.get(message.id);
+    if (!call) return;
+    pending.delete(message.id);
+    clearTimeout(call.timer);
+    if (message.error) call.reject(new Error(message.error));
+    else call.resolve(message.result);
+  });
+
+  socket.on("close", () => {
+    if (page !== socket) return;
+    page = null;
+    log("editor disconnected");
+    rejectPending("The editor disconnected.");
+  });
+}
+
+function rejectPending(reason) {
+  for (const [id, call] of pending) {
+    pending.delete(id);
+    clearTimeout(call.timer);
+    call.reject(new Error(reason));
+  }
+}
+
+/** Another session wants the editor: let go of the port and the tab. */
+function handOff(server, socket) {
+  log("another agent session took over the editor");
+  listening = false;
+  const tab = page;
+  page = null;
+  rejectPending("Another agent session took over Minimal Editor.");
+  tab?.close(HANDED_OFF_CODE, "Another agent session took over");
+  server.close();
+  socket.close();
+  // Take it back once that session exits.
+  retryTimer = setTimeout(listen, 3000);
+}
+
+/** The writer uses whichever session last asked: take the editor from the one holding it. */
+function takeOver() {
+  takingOver ??= (async () => {
+    await new Promise((resolve) => {
+      const ws = new WebSocket(`ws://127.0.0.1:${PORT}${HANDOFF_PATH}`);
+      const timer = setTimeout(() => {
+        ws.terminate();
+        resolve();
+      }, 2000);
+      const done = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      ws.on("close", done);
+      ws.on("error", done);
+    });
+    for (let i = 0; i < 10 && !(await listen()); i++) await sleep(200);
+    // The tab notices the old session left and reconnects within a second or two.
+    for (let i = 0; i < 50 && listening && !page; i++) await sleep(100);
+  })().finally(() => {
+    takingOver = null;
+  });
+  return takingOver;
+}
+
+async function callEditor(method, params = {}) {
+  if (!listening) await takeOver();
   if (!page) {
-    return Promise.reject(
-      new Error(
-        listening
-          ? 'Minimal Editor isn\'t connected. Ask the writer to open the editor and click "Connect agent" in the toolbar.'
-          : "Another agent session is connected to Minimal Editor. Close it, or ask the writer which session to use."
-      )
+    throw new Error(
+      listening
+        ? 'Minimal Editor isn\'t connected. Ask the writer to open the editor and click "Connect agent" in the toolbar.'
+        : "Couldn't take over Minimal Editor from another agent session. Ask the writer to close it."
     );
   }
   const id = nextId++;
