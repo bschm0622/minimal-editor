@@ -517,7 +517,8 @@
   position: absolute;
   left: calc(100% + 1.25rem);
   display: inline-flex;
-  align-items: center;
+  /* The icon sits on the baseline and stands as tall as the digits. */
+  align-items: baseline;
   gap: 0.2em;
   font-size: 0.75em;
   font-variant-numeric: tabular-nums;
@@ -526,8 +527,8 @@
 }
 
 .tiptap .alt-count svg {
-  width: 1.1em;
-  height: 1.1em;
+  width: 0.85em;
+  height: 0.85em;
 }
 
 .tiptap .alt-current,
