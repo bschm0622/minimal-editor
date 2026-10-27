@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import type { Editor } from "@tiptap/core";
 import { useEditorState } from "@tiptap/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BotIcon, Cancel01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import {
   alternativeAt,
   inlineToMarkdown,
@@ -124,7 +124,7 @@ function Bullet({ shown, ai }: { shown: "original" | "suggestion" | null; ai: bo
       aria-hidden
     >
       {ai ? (
-        <HugeiconsIcon icon={BotIcon} size={12} strokeWidth={2} />
+        <span className="text-[9px] leading-none font-semibold">AI</span>
       ) : (
         <span className="size-1.5 rounded-full bg-current" />
       )}

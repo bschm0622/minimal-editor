@@ -51,7 +51,7 @@ place. A paragraph an agent adds arrives the same way, with
 "not there" as its original: keep it, or keep "not there" and it goes.
 
 `Alt + Enter` opens a side panel with the versions as a list (top line is the
-original, a robot marks AI suggestions, a cut is crossed out). Type straight
+original, "AI" marks an agent's suggestions, a cut is crossed out). Type straight
 into a line to rewrite it; `Enter` adds a version, `↑ / ↓` moves between them,
 `Backspace` on an empty line deletes it, and `Esc` or `Alt + Enter` goes back
 to the text. To settle on one, click the ✓ on its line or press

@@ -591,9 +591,12 @@ export function listAlternatives(state: EditorState) {
 
 const pluginKey = new PluginKey("alternatives");
 
-/** "2/3" beside the alternative the cursor is in: which version is showing, of how many. */
+/**
+ * "2/3" beside the alternative the cursor is in: which version is showing, of
+ * how many. "AI 2/3" when that version came from an agent.
+ */
 function positionWidget(range: AlternativeRange) {
-  const label = `${range.active + 1}/${range.variants.length}`;
+  const label = `${range.ai[range.active] ? "AI " : ""}${range.active + 1}/${range.variants.length}`;
   return Decoration.widget(
     range.to,
     () => {
