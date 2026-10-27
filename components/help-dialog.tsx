@@ -28,7 +28,8 @@ const SHORTCUTS = [
   { key: `${ALT_KEY}↑ / ↓`, description: "Switch between alternatives" },
   { key: `${ALT_KEY}↵`, description: "Add or show alternatives" },
   { key: `${ALT_KEY}D`, description: "Dim or undim the selected text" },
-  { key: `↵ / ${MOD_KEY}↵`, description: "In the panel: add / accept a version" },
+  { key: `${MOD_KEY}↵`, description: "Accept the version showing" },
+  { key: "↵", description: "In the panel: add a version" },
 ];
 
 const AGENT_DOCS = "https://github.com/bschm0622/minimal-editor#setup-with-claude-code";

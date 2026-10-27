@@ -46,12 +46,12 @@ AI built in: your own agent drives the page in your own browser (see
 
 Text with a dotted underline has other versions: grey while the original is on
 screen, blue while another version is. Put the cursor in it to see which
-version is showing, like 2/3, and press `Alt + ↑ / ↓` to switch versions in
-place. A paragraph an agent adds arrives the same way, with
+version is showing, like 2/3, press `Alt + ↑ / ↓` to switch versions in
+place, and `Cmd/Ctrl + Enter` to keep the one showing. A paragraph an agent adds arrives the same way, with
 "not there" as its original: keep it, or keep "not there" and it goes.
 
 `Alt + Enter` opens a side panel with the versions as a list (top line is the
-original, "AI" marks an agent's suggestions, a cut is crossed out). Type straight
+original, the agent icon marks an agent's suggestions, a cut is crossed out). Type straight
 into a line to rewrite it; `Enter` adds a version, `↑ / ↓` moves between them,
 `Backspace` on an empty line deletes it, and `Esc` or `Alt + Enter` goes back
 to the text. To settle on one, click the ✓ on its line or press

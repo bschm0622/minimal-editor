@@ -2,12 +2,14 @@ import { Extension, type Editor } from "@tiptap/core";
 import { create } from "zustand";
 import {
   addAlternative,
+  alternativeAt,
   alternativeInSelection,
   canAddAlternative,
   cycleAlternative,
   findAlternative,
   inlineToText,
   listAlternatives,
+  resolveAlternative,
   toggleDim,
   updateAlternative,
   withoutVersion,
@@ -97,6 +99,14 @@ export const AlternativeShortcuts = Extension.create({
     return {
       "Alt-ArrowUp": () => cycleAlternative(this.editor, -1),
       "Alt-ArrowDown": () => cycleAlternative(this.editor, 1),
+      // In text with versions, accept the one showing; elsewhere it's still a line break.
+      "Mod-Enter": () => {
+        const range = alternativeAt(this.editor.state);
+        if (!range) return false;
+        pruneFreshVersion();
+        useAlternativesUI.getState().closePanel();
+        return resolveAlternative(this.editor, range.id, "shown");
+      },
       "Alt-Enter": () => {
         const ui = useAlternativesUI.getState();
         if (ui.panelOpen) {
