@@ -32,7 +32,8 @@ name the editor: "suggest edits to my draft in Minimal Editor".
 - `list_alternatives`: versions already in the doc
 - `suggest`: add versions of words, sentences or paragraphs, which you switch
   between and keep or drop in the editor
-- `insert`: add drafted paragraphs, when you ask for them
+- `insert`: add drafted paragraphs when you ask for them, as suggestions you
+  keep or drop
 
 ## Settings
 

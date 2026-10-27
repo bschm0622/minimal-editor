@@ -10,6 +10,7 @@ import {
   inlineToMarkdown,
   inlineToText,
   acceptAllAlternatives,
+  firstWithText,
   listAlternatives,
   resolveAlternative,
   showVariant,
@@ -94,7 +95,7 @@ function useAlternativesState(editor: Editor | null, panelOpen: boolean) {
           all: all.map((r) => ({
             id: r.id,
             to: r.to,
-            label: inlineToText(r.variants[r.active]).trim() || inlineToText(r.variants[0]).trim(),
+            label: inlineToText(r.variants[r.active]).trim() || inlineToText(firstWithText(r.variants)).trim(),
             dimmed: !r.variants[r.active].length,
             changed: r.active !== 0,
           })),
@@ -265,7 +266,9 @@ function VersionLine({
     (state) => state.fresh?.id === current.id && state.fresh.index === index
   );
 
-  const cut = index > 0 && !fresh && !version.text.trim();
+  // A cut, or the "not there" original of an added paragraph.
+  const cut = !fresh && !version.text.trim();
+  const crossedOut = current.versions.find((v) => v.text.trim())?.text.trim() ?? "";
 
   return (
     <li className="group flex items-start gap-2">
@@ -275,11 +278,11 @@ function VersionLine({
           ref={ref}
           rows={1}
           value={draft ?? version.text.trim()}
-          // A cut shows the original, crossed out.
-          placeholder={index === 0 ? "" : fresh ? "New version" : current.versions[0].text.trim()}
+          // A cut shows the text it removes, crossed out.
+          placeholder={fresh ? "New version" : cut ? crossedOut : ""}
           aria-label={[
             index === 0 ? "Original" : `Version ${index + 1}`,
-            cut && "dimmed",
+            cut && (index === 0 ? "not there" : "dimmed"),
             active && "showing",
             version.ai && "suggested by AI",
           ]

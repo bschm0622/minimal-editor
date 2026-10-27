@@ -1,11 +1,13 @@
 import {
   DOMParser as ProseMirrorDOMParser,
+  Fragment,
   type Node as ProseMirrorNode,
 } from "@tiptap/pm/model";
 import {
   addAlternative,
   inlineToText,
   listAlternatives,
+  suggestedBlock,
   textToInline,
   type AlternativeResult,
 } from "./alternatives";
@@ -74,7 +76,7 @@ interface Insertion {
   before?: string;
 }
 
-function insertBlocks(input: Insertion): AlternativeResult | { ok: true } {
+function insertBlocks(input: Insertion): AlternativeResult | { ok: true; ids: string[] } {
   const editor = getEditor();
   if (!input?.markdown?.trim()) return { ok: false, error: "`markdown` is required." };
 
@@ -90,9 +92,17 @@ function insertBlocks(input: Insertion): AlternativeResult | { ok: true } {
 
   const wrapper = document.createElement("div");
   wrapper.innerHTML = markdownToHtml(input.markdown);
-  const blocks = ProseMirrorDOMParser.fromSchema(schema).parse(wrapper).content;
-  editor.view.dispatch(editor.state.tr.insert(pos, blocks).scrollIntoView());
-  return { ok: true };
+  const parsed = ProseMirrorDOMParser.fromSchema(schema).parse(wrapper).content;
+  // Paragraphs and headings arrive as suggestions, so the writer sees what's new and decides.
+  const ids: string[] = [];
+  const blocks: ProseMirrorNode[] = [];
+  parsed.forEach((block) => {
+    const suggested = suggestedBlock(schema, block);
+    if (suggested) ids.push(suggested.id);
+    blocks.push(suggested?.node ?? block);
+  });
+  editor.view.dispatch(editor.state.tr.insert(pos, Fragment.fromArray(blocks)).scrollIntoView());
+  return { ok: true, ids };
 }
 
 function getEditor() {
@@ -147,6 +157,8 @@ Draft
     Adds new paragraphs (Markdown, can be several) after or before the paragraph containing
     the exact text given, or at the end. Inside a list, quote or table, they go after or
     before the whole list, quote or table. Only when the writer asked for drafted text.
+    New paragraphs and headings arrive as suggestions the writer keeps or drops; lists,
+    quotes, tables and code arrive as plain text, so tell the writer which ones you added.
     To rewrite an existing paragraph, use suggest() with the whole paragraph as find instead.
 
 Suggest

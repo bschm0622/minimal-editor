@@ -45,8 +45,10 @@ AI built in: your own agent drives the page in your own browser (see
 ## Alternatives
 
 Text with a dotted underline has other versions: grey while the original is on
-screen, blue while another version is. Put the cursor in it and press
-`Alt + ↑ / ↓` to switch versions in place.
+screen, blue while another version is. The small number after it says how
+many versions there are. Put the cursor in it and press `Alt + ↑ / ↓` to
+switch versions in place. A paragraph an agent adds arrives the same way, with
+"not there" as its original: keep it, or keep "not there" and it goes.
 
 `Alt + Enter` opens a side panel with the versions as a list (top line is the
 original, a robot marks AI suggestions, a cut is crossed out). Type straight
@@ -128,7 +130,8 @@ minimalEditor.suggest([
 // → [{ ok: true, id, matches }, { ok: false, error, matches }, ...]
 
 minimalEditor.insert({ markdown: "A new paragraph.", after: "End of the paragraph before." })
-// → { ok: true } — new paragraphs after (or `before`) the one containing that text, or at the end
+// → { ok: true, ids }: after (or `before`) the paragraph containing that text, or at the end.
+// New paragraphs and headings arrive as suggestions; lists, quotes, tables and code as plain text.
 ```
 
 - `find` is exact plain text within one paragraph. Include the trailing space

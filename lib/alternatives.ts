@@ -25,6 +25,7 @@ import { htmlToMarkdown, markdownToHtml } from "./markdown";
  * hold every version, so the doc's saved HTML carries them too. A version
  * with no text (a suggested removal) is shown as an `alternativeGap` node,
  * since a mark can't sit on nothing; it draws the original text dimmed.
+ * A paragraph an agent adds is an alternative whose original is empty.
  */
 
 const MARK_NAME = "alternative";
@@ -71,6 +72,7 @@ function readAttrs(element: HTMLElement, idAttribute: string, gap: boolean) {
       !Array.isArray(variants) ||
       variants.length < 2 ||
       !variants.every(isVersion) ||
+      !variants.some((v) => v.length) ||
       !Number.isInteger(active) ||
       active < 0 ||
       active >= variants.length ||
@@ -106,6 +108,11 @@ const attributes = {
   variants: { default: [], rendered: false, parseHTML: () => null },
   ai: { default: [], rendered: false, parseHTML: () => null },
 };
+
+/** The text a gap draws dimmed: the original, or for an added paragraph, the addition. */
+export function firstWithText(variants: JSONContent[][]) {
+  return variants.find((v) => v.length) ?? [];
+}
 
 /** A copy of `attrs` without version `index`, still showing a sensible version. */
 export function withoutVersion(attrs: AlternativeAttrs, index: number): AlternativeAttrs {
@@ -459,11 +466,18 @@ export function addAlternative(
   return { ok: true, id: attrs.id };
 }
 
-/** Replaces from..to with plain content. Removing text doesn't leave two spaces behind. */
+/**
+ * Replaces from..to with plain content. Removing text doesn't leave two
+ * spaces behind, and a paragraph left with nothing in it goes too.
+ */
 function replaceWithPlain(tr: Transaction, from: number, to: number, content: Fragment) {
   tr.replaceWith(from, to, content);
   if (content.size) return;
   const $at = tr.doc.resolve(from);
+  if ($at.depth === 1 && !$at.parent.content.size && tr.doc.childCount > 1) {
+    tr.delete($at.before(), $at.after());
+    return;
+  }
   const after = $at.nodeAfter?.text?.[0];
   const before = $at.nodeBefore ? $at.nodeBefore.text?.slice(-1) : " ";
   if (after === " " && before === " ") tr.delete(from, from + 1);
@@ -554,6 +568,19 @@ export function acceptAllAlternatives(editor: Editor) {
   if (tr.docChanged) editor.view.dispatch(tr);
 }
 
+/** A new paragraph or heading from an agent, as a suggestion whose original is "not there". */
+export function suggestedBlock(schema: Schema, block: ProseMirrorNode) {
+  if (!block.isTextblock || !block.content.size) return null;
+  if (!block.type.allowsMarkType(schema.marks[MARK_NAME])) return null;
+  const attrs: AlternativeAttrs = {
+    id: createId(),
+    active: 1,
+    variants: [[], inlineToJSON(block.content, schema)],
+    ai: [false, true],
+  };
+  return { id: attrs.id, node: block.type.create(block.attrs, buildContent(schema, attrs), block.marks) };
+}
+
 /** Alternatives with every version read live, for the side panel and the API. */
 export function listAlternatives(state: EditorState) {
   return collectAlternatives(state.doc).map((range) => ({
@@ -563,6 +590,32 @@ export function listAlternatives(state: EditorState) {
 }
 
 const pluginKey = new PluginKey("alternatives");
+
+let countCache: { doc: ProseMirrorNode; set: DecorationSet } | null = null;
+
+/** A small raised number after each alternative: how many versions it has. Never part of the text. */
+function countDecorations(doc: ProseMirrorNode) {
+  if (countCache?.doc === doc) return countCache.set;
+  const widgets = collectAlternatives(doc).map((range) => {
+    const count = range.variants.length;
+    const suggestion = range.active !== 0;
+    return Decoration.widget(
+      range.to,
+      () => {
+        const sup = document.createElement("sup");
+        sup.className = "alt-count";
+        sup.textContent = String(count);
+        sup.setAttribute("aria-hidden", "true");
+        if (suggestion) sup.dataset.shown = "variant";
+        return sup;
+      },
+      { side: -1, marks: [], ignoreSelection: true, key: `${count}-${suggestion}` }
+    );
+  });
+  const set = DecorationSet.create(doc, widgets);
+  countCache = { doc, set };
+  return set;
+}
 
 const alternativesPlugin = (markType: () => MarkType) =>
   new Plugin({
@@ -616,9 +669,10 @@ const alternativesPlugin = (markType: () => MarkType) =>
     },
     props: {
       decorations(state) {
+        const counts = countDecorations(state.doc);
         const range = alternativeAt(state);
-        if (!range) return null;
-        return DecorationSet.create(state.doc, [
+        if (!range) return counts;
+        return counts.add(state.doc, [
           range.gap
             ? Decoration.node(range.from, range.to, { class: "alt-current" })
             : Decoration.inline(range.from, range.to, { class: "alt-current" }),
@@ -729,7 +783,7 @@ export const AlternativeGap = Node.create({
         class: "alt-gap",
         "data-alternative-gap": attrs.id,
         // Shown dimmed through CSS, so it never counts as doc text.
-        "data-removed-text": inlineToText(attrs.variants[0] ?? []),
+        "data-removed-text": inlineToText(firstWithText(attrs.variants)),
         ...renderAttrs(attrs),
       },
     ];
@@ -781,11 +835,13 @@ export function undim(editor: Editor, ids: string[]) {
     updateAlternative(editor, id, (attrs) => {
       const keep = attrs.variants.map((v, i) => i === 0 || v.length > 0);
       const variants = attrs.variants.filter((_, i) => keep[i]);
+      const shown = variants.indexOf(attrs.variants[attrs.active]);
       return {
         ...attrs,
         variants,
         ai: attrs.ai.filter((_, i) => keep[i]),
-        active: Math.max(0, variants.indexOf(attrs.variants[attrs.active])),
+        // An added paragraph's original is empty: bring back the addition.
+        active: variants[shown]?.length ? shown : Math.max(0, variants.findIndex((v) => v.length)),
       };
     });
   }

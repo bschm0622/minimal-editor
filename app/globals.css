@@ -499,6 +499,20 @@
   text-decoration-color: var(--link);
 }
 
+/* How many versions: a quiet raised number after the text, never part of it. */
+.tiptap .alt-count {
+  margin-left: 0.1em;
+  font-size: 0.6em;
+  font-variant-numeric: tabular-nums;
+  line-height: 0;
+  color: color-mix(in oklab, var(--foreground) 45%, transparent);
+  user-select: none;
+}
+
+.tiptap .alt-count[data-shown="variant"] {
+  color: var(--link);
+}
+
 .tiptap .alt-current,
 .tiptap .alt-current .alt {
   background: color-mix(in oklab, var(--link) 14%, transparent);

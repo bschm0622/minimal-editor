@@ -130,9 +130,9 @@ Suggest edits as alternatives: extra versions of a word, sentence or paragraph t
 - "" as a version suggests cutting the text; it shows dimmed in place. Include a sentence's trailing space when cutting it.
 - Suggest at the smallest unit that works, and keep the writer's voice.
 - Switching docs with open_doc changes what's on their screen, so say so.
-- Inserted paragraphs aren't marked, so tell the writer which ones you added.
+- Inserted paragraphs and headings arrive as suggestions the writer keeps or drops. Lists, quotes, tables and code arrive as plain text, so name those.
 
-How they review: a dotted underline marks text with versions (blue when a suggestion is showing). Alt+↑/↓ (Option on a Mac) switches versions in place, Alt+Enter lists them, and the check on a version (or Cmd/Ctrl+Enter) accepts it.`;
+How they review: a dotted underline and a small number mark text with versions (blue when a suggestion is showing). Alt+↑/↓ (Option on a Mac) switches versions in place, Alt+Enter lists them, and the check on a version (or Cmd/Ctrl+Enter) accepts it.`;
 
 const mcp = new McpServer(
   { name: "minimal-editor", version: "0.1.0" },
@@ -212,7 +212,7 @@ mcp.registerTool(
   "insert",
   {
     description:
-      "Add new paragraphs (Markdown) after or before the paragraph containing the given text, or at the end. Only when the writer asked for drafted text; to rewrite a paragraph, use suggest instead.",
+      "Add new paragraphs (Markdown) after or before the paragraph containing the given text, or at the end. New paragraphs and headings arrive as suggestions the writer keeps or drops. Only when the writer asked for drafted text; to rewrite a paragraph, use suggest instead.",
     inputSchema: {
       markdown: z.string().min(1),
       after: z.string().optional().describe("Exact text from the paragraph before"),

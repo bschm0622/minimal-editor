@@ -36,7 +36,7 @@ const AGENT_DOCS = "https://github.com/bschm0622/minimal-editor#setup-with-claud
 const FEATURES = [
   "Paste Markdown and it turns into rich text.",
   "Select text for a small bar to format it, copy it as Markdown, add an alternative or dim it.",
-  "Text with a dotted underline has other versions.",
+  "Text with a dotted underline has other versions; the small number says how many.",
   "A doc's tab is named after its first line.",
 ];
 
