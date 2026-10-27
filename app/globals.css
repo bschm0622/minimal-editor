@@ -499,12 +499,21 @@
   text-decoration-color: var(--link);
 }
 
-/* How many versions: a quiet raised number after the text, never part of it. */
+/* How many versions: a small raised number in a circle after the text, never part of it. */
 .tiptap .alt-count {
-  margin-left: 0.1em;
-  font-size: 0.6em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 1.7em;
+  height: 1.7em;
+  margin-left: 0.15em;
+  border: 1px solid currentColor;
+  border-radius: 9999px;
+  font-size: 0.5em;
   font-variant-numeric: tabular-nums;
-  line-height: 0;
+  line-height: 1;
+  vertical-align: 0.6em;
   color: color-mix(in oklab, var(--foreground) 45%, transparent);
   user-select: none;
 }
