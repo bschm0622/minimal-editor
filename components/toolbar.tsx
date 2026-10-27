@@ -396,10 +396,11 @@ export function Toolbar() {
             <span
               aria-hidden
               className={cn(
-                "absolute top-1.5 right-1.5 size-1.5 rounded-full",
+                // Bottom right, where the icon is empty: green connected, amber waiting.
+                "absolute right-1.5 bottom-1.5 size-1.5 rounded-full",
                 agentStatus === "connected"
                   ? "bg-emerald-500 dark:bg-emerald-400"
-                  : "border border-muted-foreground"
+                  : "bg-amber-400 dark:bg-amber-300"
               )}
             />
           ) : null}

@@ -101,7 +101,12 @@ function insertBlocks(input: Insertion): AlternativeResult | { ok: true; ids: st
     if (suggested) ids.push(suggested.id);
     blocks.push(suggested?.node ?? block);
   });
-  editor.view.dispatch(editor.state.tr.insert(pos, Fragment.fromArray(blocks)).scrollIntoView());
+  editor.view.dispatch(
+    editor.state.tr
+      .insert(pos, Fragment.fromArray(blocks))
+      .setMeta("addToHistory", false)
+      .scrollIntoView()
+  );
   return { ok: true, ids };
 }
 
@@ -137,7 +142,8 @@ function suggestOne(input: Suggestion): SuggestResult {
     editor,
     range,
     input.alternatives.map((text) => textToInline(editor.schema, text)),
-    { show: input.show, ai: true }
+    // An agent's edits stay out of the writer's undo history: ⌘Z undoes their own typing.
+    { show: input.show, ai: true, history: false }
   );
   return { ...result, matches: count };
 }

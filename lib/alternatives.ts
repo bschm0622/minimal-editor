@@ -412,6 +412,8 @@ export function addAlternative(
     ai?: boolean;
     /** Put the cursor at the end of the new alternative. */
     select?: boolean;
+    /** Leave it out of the writer's undo history (an agent's edit). */
+    history?: boolean;
   } = {}
 ): AlternativeResult {
   const flag = options.ai ?? false;
@@ -463,6 +465,7 @@ export function addAlternative(
   if (options.select) {
     tr.setSelection(TextSelection.create(tr.doc, from + content.size));
   }
+  if (options.history === false) tr.setMeta("addToHistory", false);
   editor.view.dispatch(tr);
   return { ok: true, id: attrs.id };
 }
