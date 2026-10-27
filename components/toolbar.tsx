@@ -383,7 +383,7 @@ export function Toolbar() {
               aria-label={AGENT_LABEL[agentStatus]}
               aria-pressed={agentStatus !== "off"}
               className={cn(
-                // The dot carries the status, so the icon stays muted even when on.
+                // The sparkle carries the status, so the pencil stays muted even when on.
                 "relative ml-1 text-muted-foreground transition-opacity duration-200",
                 // Hidden with the rest of the toolbar unless an agent is on.
                 agentStatus === "off" && !expanded && "pointer-events-none opacity-0"
@@ -391,19 +391,18 @@ export function Toolbar() {
             />
           }
         >
-          <HugeiconsIcon icon={AiEditingIcon} size={16} strokeWidth={1.5} />
-          {agentStatus !== "off" ? (
-            <span
-              aria-hidden
-              className={cn(
-                // Bottom right, where the icon is empty: green connected, amber waiting.
-                "absolute right-1.5 bottom-1.5 size-1.5 rounded-full",
-                agentStatus === "connected"
-                  ? "bg-emerald-500 dark:bg-emerald-400"
-                  : "bg-amber-400 dark:bg-amber-300"
-              )}
-            />
-          ) : null}
+          <HugeiconsIcon
+            icon={AiEditingIcon}
+            size={16}
+            strokeWidth={1.5}
+            // The sparkle lights up: green when connected, amber while waiting.
+            className={cn(
+              agentStatus === "connected" &&
+                "[&>path:first-child]:fill-emerald-500 [&>path:first-child]:stroke-emerald-500 dark:[&>path:first-child]:fill-emerald-400 dark:[&>path:first-child]:stroke-emerald-400",
+              agentStatus === "waiting" &&
+                "[&>path:first-child]:fill-amber-500 [&>path:first-child]:stroke-amber-500 dark:[&>path:first-child]:fill-amber-300 dark:[&>path:first-child]:stroke-amber-300"
+            )}
+          />
         </TooltipTrigger>
         <TooltipContent>{AGENT_LABEL[agentStatus]}</TooltipContent>
       </Tooltip>

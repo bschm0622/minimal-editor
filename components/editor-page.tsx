@@ -64,7 +64,7 @@ export function EditorPage() {
       <div className="flex min-h-screen flex-col bg-background">
         <Toolbar />
         <main
-          className={`flex flex-1 flex-col pt-12 ${panelOpen ? "sm:pr-72" : ""}`}
+          className="flex flex-1 flex-col pt-12"
           data-alt-panel={panelOpen ? "open" : undefined}
         >
           <Editor />

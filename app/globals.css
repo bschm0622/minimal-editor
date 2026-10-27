@@ -508,6 +508,16 @@
   user-select: none;
 }
 
+/*
+ * The doc stays put when the panel opens. In a window under 1328px wide the
+ * text would run under the panel, so it moves left just enough to clear it.
+ */
+@media (min-width: 640px) {
+  [data-alt-panel="open"] {
+    padding-right: max(0px, calc(1328px - 100vw));
+  }
+}
+
 /* The open panel lists the versions already. */
 [data-alt-panel="open"] .tiptap .alt-count {
   display: none;
