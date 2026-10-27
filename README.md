@@ -45,9 +45,9 @@ AI built in: your own agent drives the page in your own browser (see
 ## Alternatives
 
 Text with a dotted underline has other versions: grey while the original is on
-screen, blue while another version is. The small number after it says how
-many versions there are. Put the cursor in it and press `Alt + ↑ / ↓` to
-switch versions in place. A paragraph an agent adds arrives the same way, with
+screen, blue while another version is. Put the cursor in it to see which
+version is showing, like 2/3, and press `Alt + ↑ / ↓` to switch versions in
+place. A paragraph an agent adds arrives the same way, with
 "not there" as its original: keep it, or keep "not there" and it goes.
 
 `Alt + Enter` opens a side panel with the versions as a list (top line is the

@@ -97,6 +97,7 @@ function useAlternativesState(editor: Editor | null, panelOpen: boolean) {
             to: r.to,
             label: inlineToText(r.variants[r.active]).trim() || inlineToText(firstWithText(r.variants)).trim(),
             dimmed: !r.variants[r.active].length,
+            count: r.variants.length,
             changed: r.active !== 0,
           })),
         };
@@ -427,6 +428,9 @@ export function AlternativesPanel() {
                 >
                   {item.label}
                 </button>
+                <span className="shrink-0 text-xs leading-5 text-muted-foreground tabular-nums">
+                  {item.count}
+                </span>
               </li>
             ))}
           </ul>

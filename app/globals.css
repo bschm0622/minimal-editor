@@ -154,6 +154,7 @@
 
 /* Tiptap Editor Styles */
 .tiptap {
+  position: relative;
   caret-color: var(--foreground);
 }
 
@@ -499,27 +500,26 @@
   text-decoration-color: var(--link);
 }
 
-/* How many versions: a small raised number in a circle after the text, never part of it. */
+/*
+ * "2/3" for the alternative the cursor is in, out in the right margin on the
+ * line where it ends, so the text never shifts to make room.
+ */
 .tiptap .alt-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  width: 1.7em;
-  height: 1.7em;
-  margin-left: 0.15em;
-  border: 1px solid currentColor;
-  border-radius: 9999px;
-  font-size: 0.5em;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  vertical-align: 0.6em;
-  color: color-mix(in oklab, var(--foreground) 45%, transparent);
   user-select: none;
 }
 
-.tiptap .alt-count[data-shown="variant"] {
-  color: var(--link);
+/* The open panel lists the versions already. */
+[data-alt-panel="open"] .tiptap .alt-count {
+  display: none;
+}
+
+.tiptap .alt-count > span {
+  position: absolute;
+  left: calc(100% + 1.25rem);
+  font-size: 0.75em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--muted-foreground);
 }
 
 .tiptap .alt-current,

@@ -591,30 +591,22 @@ export function listAlternatives(state: EditorState) {
 
 const pluginKey = new PluginKey("alternatives");
 
-let countCache: { doc: ProseMirrorNode; set: DecorationSet } | null = null;
-
-/** A small raised number after each alternative: how many versions it has. Never part of the text. */
-function countDecorations(doc: ProseMirrorNode) {
-  if (countCache?.doc === doc) return countCache.set;
-  const widgets = collectAlternatives(doc).map((range) => {
-    const count = range.variants.length;
-    const suggestion = range.active !== 0;
-    return Decoration.widget(
-      range.to,
-      () => {
-        const sup = document.createElement("sup");
-        sup.className = "alt-count";
-        sup.textContent = String(count);
-        sup.setAttribute("aria-hidden", "true");
-        if (suggestion) sup.dataset.shown = "variant";
-        return sup;
-      },
-      { side: -1, marks: [], ignoreSelection: true, key: `${count}-${suggestion}` }
-    );
-  });
-  const set = DecorationSet.create(doc, widgets);
-  countCache = { doc, set };
-  return set;
+/** "2/3" beside the alternative the cursor is in: which version is showing, of how many. */
+function positionWidget(range: AlternativeRange) {
+  const label = `${range.active + 1}/${range.variants.length}`;
+  return Decoration.widget(
+    range.to,
+    () => {
+      const anchor = document.createElement("span");
+      anchor.className = "alt-count";
+      anchor.setAttribute("aria-hidden", "true");
+      const text = document.createElement("span");
+      text.textContent = label;
+      anchor.appendChild(text);
+      return anchor;
+    },
+    { side: -1, marks: [], ignoreSelection: true, key: `${range.id}-${label}` }
+  );
 }
 
 const alternativesPlugin = (markType: () => MarkType) =>
@@ -669,13 +661,13 @@ const alternativesPlugin = (markType: () => MarkType) =>
     },
     props: {
       decorations(state) {
-        const counts = countDecorations(state.doc);
         const range = alternativeAt(state);
-        if (!range) return counts;
-        return counts.add(state.doc, [
+        if (!range) return null;
+        return DecorationSet.create(state.doc, [
           range.gap
             ? Decoration.node(range.from, range.to, { class: "alt-current" })
             : Decoration.inline(range.from, range.to, { class: "alt-current" }),
+          positionWidget(range),
         ]);
       },
       // Copying (or dragging) a whole alternative keeps its versions, up to

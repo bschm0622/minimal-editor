@@ -65,6 +65,7 @@ export function EditorPage() {
         <Toolbar />
         <main
           className={`flex flex-1 flex-col pt-12 ${panelOpen ? "sm:pr-72" : ""}`}
+          data-alt-panel={panelOpen ? "open" : undefined}
         >
           <Editor />
         </main>
