@@ -22,11 +22,19 @@ type Params = Record<string, unknown>;
 const methods: Record<string, (params: Params) => unknown> = {
   docs: () => editorApi.docs(),
   open: ({ id }) => editorApi.open(String(id)),
-  read: ({ format }) => (format === "markdown" ? editorApi.read() : editorApi.text()),
-  list: () => editorApi.list(),
-  suggest: ({ suggestions }) => editorApi.suggest(suggestions as Parameters<typeof editorApi.suggest>[0]),
+  read: ({ format, doc }) =>
+    format === "markdown" ? editorApi.read(docId(doc)) : editorApi.text(docId(doc)),
+  list: ({ doc }) => editorApi.list(docId(doc)),
+  suggest: ({ suggestions, doc }) =>
+    editorApi.suggest(suggestions as Parameters<typeof editorApi.suggest>[0], docId(doc)),
   insert: (params) => editorApi.insert(params as unknown as Parameters<typeof editorApi.insert>[0]),
+  create: (params) => editorApi.create(params as Parameters<typeof editorApi.create>[0]),
 };
+
+/** A doc id from the helper, or undefined for the open doc. */
+function docId(value: unknown) {
+  return typeof value === "string" && value ? value : undefined;
+}
 
 let socket: WebSocket | null = null;
 let retry: ReturnType<typeof setTimeout> | null = null;

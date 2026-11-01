@@ -47,6 +47,12 @@ export interface AlternativeRange extends AlternativeAttrs {
   gap: boolean;
 }
 
+/** A doc to change: the live editor, or a doc that isn't on screen. */
+export interface DocTarget {
+  readonly state: EditorState;
+  view: { dispatch: (tr: Transaction) => void };
+}
+
 export type AlternativeResult =
   | { ok: true; id: string }
   | { ok: false; error: string };
@@ -404,7 +410,7 @@ export function canAddAlternative(state: EditorState, from: number, to: number) 
  * added to it.
  */
 export function addAlternative(
-  editor: Editor,
+  editor: DocTarget,
   { from, to }: { from: number; to: number },
   suggestions: JSONContent[][],
   options: {

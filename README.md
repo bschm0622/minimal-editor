@@ -119,8 +119,9 @@ minimalEditor.help()      // these instructions, for an agent that just found th
 minimalEditor.text()      // open doc as plain text: copy `find` strings from here
 minimalEditor.read()      // open doc as Markdown
 minimalEditor.docs()      // [{ id, title, open }]
-await minimalEditor.open(id)  // switch to a doc (resolves once it's loaded)
+await minimalEditor.open(id)  // show a doc on screen (resolves once it's loaded)
 minimalEditor.list()      // [{ id, shown, versions: [original, ...], fromAi }]
+minimalEditor.text(id)    // any call takes a doc id to work in a doc that isn't open
 
 minimalEditor.suggest([
   { find: "quick brown", alternatives: ["speedy russet", "**fast** red"] },
@@ -132,6 +133,10 @@ minimalEditor.suggest([
 minimalEditor.insert({ markdown: "A new paragraph.", after: "End of the paragraph before." })
 // → { ok: true, ids }: after (or `before`) the paragraph containing that text, or at the end.
 // New paragraphs and headings arrive as suggestions; lists, quotes, tables and code as plain text.
+// suggest(list, id) and insert({ ..., doc: id }) work in another doc without opening it.
+
+minimalEditor.create({ title: "Notes", markdown: "A first paragraph." })
+// → { ok: true, id }: a new doc as the last tab, left closed.
 ```
 
 - `find` is exact plain text within one paragraph. Include the trailing space

@@ -194,10 +194,16 @@ Suggest edits as alternatives: extra versions of a word, sentence or paragraph t
 - Send every suggestion in one suggest call and check each result. Fix the find text and resend failures.
 - "" as a version suggests cutting the text; it shows dimmed in place. Include a sentence's trailing space when cutting it.
 - Suggest at the smallest unit that works, and keep the writer's voice.
-- Switching docs with open_doc changes what's on their screen, so say so.
+- Every tool works on the doc on the writer's screen unless you pass another doc's id as doc (from list_docs). Other docs change in place without opening, so the writer can keep reading or writing elsewhere. Only open_doc changes their screen: use it only when they ask to see a doc.
+- create_doc adds a new doc as the last tab without opening it, when the writer asks for one.
 - Inserted paragraphs and headings arrive as suggestions the writer keeps or drops. Lists, quotes, tables and code arrive as plain text, so name those. To offer more than one draft of a new paragraph, insert one, then suggest on its full text with the others.
 
 How they review: a dotted underline marks text with versions (blue when a suggestion is showing). Alt+↑/↓ (Option on a Mac) switches versions in place, Cmd/Ctrl+Enter keeps the one showing, Alt+Enter lists them, and the check on a version accepts it.`;
+
+const DOC = z
+  .string()
+  .optional()
+  .describe("A doc id from list_docs. Leave out for the doc on the writer's screen; another doc is changed without opening it");
 
 const mcp = new McpServer(
   { name: "minimal-editor", version: "0.1.0" },
@@ -216,7 +222,8 @@ mcp.registerTool(
 mcp.registerTool(
   "open_doc",
   {
-    description: "Switch the editor to another doc. This changes what's on the writer's screen.",
+    description:
+      "Show another doc on the writer's screen. Only when they ask to see it; to read or edit another doc, pass its id as doc instead.",
     inputSchema: { id: z.string().describe("A doc id from list_docs") },
   },
   tool("open", ({ id }) => ({ id }))
@@ -226,17 +233,18 @@ mcp.registerTool(
   "read_doc",
   {
     description:
-      'The open doc. "text" (default) is plain text, one paragraph per block: copy find strings from it. Line breaks and dimmed text show as "￼". "markdown" shows headings and formatting.',
-    inputSchema: { format: z.enum(["text", "markdown"]).optional() },
+      'A doc, the one on screen unless doc is given. "text" (default) is plain text, one paragraph per block: copy find strings from it. Line breaks and dimmed text show as "￼". "markdown" shows headings and formatting.',
+    inputSchema: { format: z.enum(["text", "markdown"]).optional(), doc: DOC },
   },
-  tool("read", ({ format }) => ({ format: format ?? "text" }))
+  tool("read", ({ format, doc }) => ({ format: format ?? "text", doc }))
 );
 
 mcp.registerTool(
   "list_alternatives",
   {
     description:
-      "Alternatives already in the open doc: [{ id, shown, versions: [original, ...], fromAi }].",
+      "Alternatives already in a doc: [{ id, shown, versions: [original, ...], fromAi }].",
+    inputSchema: { doc: DOC },
   },
   tool("list")
 );
@@ -268,9 +276,10 @@ mcp.registerTool(
           })
         )
         .min(1),
+      doc: DOC,
     },
   },
-  tool("suggest", ({ suggestions }) => ({ suggestions }))
+  tool("suggest", ({ suggestions, doc }) => ({ suggestions, doc }))
 );
 
 mcp.registerTool(
@@ -282,9 +291,26 @@ mcp.registerTool(
       markdown: z.string().min(1),
       after: z.string().optional().describe("Exact text from the paragraph before"),
       before: z.string().optional().describe("Exact text from the paragraph after"),
+      doc: DOC,
     },
   },
   tool("insert")
+);
+
+mcp.registerTool(
+  "create_doc",
+  {
+    description:
+      "Add a new doc as the last tab, without opening it. Only when the writer asks for a new doc. Returns { ok, id }; pass the id as doc to other tools.",
+    inputSchema: {
+      title: z.string().optional().describe("Becomes the doc's heading"),
+      markdown: z
+        .string()
+        .optional()
+        .describe("Drafted content. Paragraphs and headings arrive as suggestions, like insert"),
+    },
+  },
+  tool("create")
 );
 
 mcp.registerPrompt(

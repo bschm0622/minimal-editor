@@ -27,13 +27,19 @@ name the editor: "suggest edits to my draft in Minimal Editor".
 ## Tools
 
 - `list_docs`: your docs, and which one is open
-- `open_doc`: switch to another doc
-- `read_doc`: the open doc as plain text or Markdown
-- `list_alternatives`: versions already in the doc
+- `open_doc`: show another doc on your screen
+- `read_doc`: a doc as plain text or Markdown
+- `list_alternatives`: versions already in a doc
 - `suggest`: add versions of words, sentences or paragraphs, which you switch
   between and keep or drop in the editor
 - `insert`: add drafted paragraphs when you ask for them, as suggestions you
   keep or drop
+- `create_doc`: add a new doc as the last tab, when you ask for one
+
+Every tool works on the doc on your screen unless the agent passes another
+doc's id. It can read and edit a doc you don't have open, so you can keep
+reading or writing elsewhere while it works; you'll see its changes when you
+switch to that doc.
 
 ## Settings
 

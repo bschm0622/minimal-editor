@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import type { Editor } from "@tiptap/core";
+import { getHTMLFromFragment, type Editor } from "@tiptap/core";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { EditorState as ProseMirrorState } from "@tiptap/pm/state";
 import { welcomeHtml } from "./welcome";
 
@@ -43,6 +44,8 @@ interface EditorState {
   hydrated: boolean;
   setEditor: (editor: Editor | null) => void;
   newDoc: () => void;
+  /** Adds a doc at the end without opening it. Returns null if it didn't fit in storage. */
+  addDoc: (html: string) => Doc | null;
   switchDoc: (id: string) => void;
   switchDocBy: (offset: number) => void;
   closeDoc: (id: string) => void;
@@ -140,6 +143,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     persistDocs(next);
     writeStorage(ACTIVE_DOC_KEY, doc.id);
     set({ docs: next, activeId: doc.id });
+  },
+
+  addDoc: (html) => {
+    const doc = { ...emptyDoc(), ...describeHtml(html) };
+    if (!writeStorage(DOC_CONTENT_PREFIX + doc.id, html)) {
+      set({ saveFailed: true });
+      return null;
+    }
+    const docs = [...get().docs, doc];
+    persistDocs(docs);
+    set({ docs });
+    return doc;
   },
 
   switchDoc: (id) => {
@@ -343,14 +358,14 @@ function describeHtml(html: string) {
   };
 }
 
-function describeEditor(editor: Editor) {
+function describeDoc(doc: ProseMirrorNode) {
   let title = "";
-  editor.state.doc.forEach((node) => {
+  doc.forEach((node) => {
     if (!title) title = node.textContent.trim().slice(0, 80);
   });
   return {
     title,
-    words: countWords(editor.state.doc.textBetween(0, editor.state.doc.content.size, " ", " ")),
+    words: countWords(doc.textBetween(0, doc.content.size, " ", " ")),
   };
 }
 
@@ -381,7 +396,7 @@ export function flushPendingSave() {
   const { docs } = useEditorStore.getState();
   if (!docs.some((d) => d.id === id)) return;
 
-  const { title, words } = describeEditor(editor);
+  const { title, words } = describeDoc(editor.state.doc);
   const next = docs.map((d) =>
     d.id === id ? { ...d, title, words, updatedAt: Date.now() } : d
   );
@@ -391,6 +406,28 @@ export function flushPendingSave() {
   // Still unsaved: try again on the next edit, or when the tab is hidden.
   if (!saved) pendingSave = { id, editor };
   useEditorStore.setState({ docs: next, saveFailed: !saved });
+}
+
+/**
+ * Saves a doc that changed while it wasn't open (an agent working in it), so
+ * it's up to date in storage and when the writer switches to it.
+ */
+export function saveDocState(id: string, state: ProseMirrorState) {
+  const { docs } = useEditorStore.getState();
+  if (!docs.some((d) => d.id === id)) return false;
+  docSessions.set(id, { state, scrollY: docSessions.get(id)?.scrollY ?? 0 });
+
+  const { doc } = state;
+  const empty = doc.childCount === 1 && !doc.firstChild!.content.size;
+  const { title, words } = describeDoc(doc);
+  const next = docs.map((d) =>
+    d.id === id ? { ...d, title, words, updatedAt: Date.now() } : d
+  );
+  const saved =
+    writeStorage(DOC_CONTENT_PREFIX + id, empty ? "" : getHTMLFromFragment(doc.content, state.schema)) &&
+    persistDocs(next);
+  useEditorStore.setState({ docs: next, saveFailed: !saved });
+  return saved;
 }
 
 const BACKUP_APP = "minimal-editor";
