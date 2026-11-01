@@ -11,12 +11,14 @@ import {
   LeftToRightListBulletIcon,
   Moon02Icon,
   QuillWrite02Icon,
+  SidebarLeftIcon,
   Sun01Icon,
   TextFontIcon,
 } from "@hugeicons/core-free-icons";
 import { useShallow } from "zustand/react/shallow";
 import { startAgentBridge, stopAgentBridge, useAgentBridge } from "@/lib/agent-bridge";
 import { useAlternativesUI } from "@/lib/alternatives-ui";
+import { useDocListUI } from "@/lib/doc-list-ui";
 import { announce } from "@/lib/announce";
 import { ALT_KEY, IS_MAC, cn } from "@/lib/utils";
 import { docLabel, useEditorStore, type EditorFont } from "@/lib/editor-store";
@@ -24,7 +26,6 @@ import {
   COPY_MARKDOWN_EVENT,
   copyDocAsMarkdown,
 } from "@/lib/use-editor-keyboard-shortcuts";
-import { DocTabs } from "@/components/doc-tabs";
 import { HelpDialog } from "@/components/help-dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -96,6 +97,9 @@ export function Toolbar() {
   const saveFailed = useEditorStore((state) => state.saveFailed);
   const agentStatus = useAgentBridge((state) => state.status);
   const panelOpen = useAlternativesUI((state) => state.panelOpen);
+  const docListOpen = useDocListUI((state) => state.open);
+  const toggleDocList = useDocListUI((state) => state.toggle);
+  const severalDocs = useEditorStore((state) => state.docs.length > 1);
   const [isDark, setIsDark] = useState(() => {
     if (typeof window === "undefined") return false;
 
@@ -202,20 +206,44 @@ export function Toolbar() {
           />
         </button>
 
-        {/* Same 32px box as the buttons, so both ends of the bar sit 16px in. */}
-        <div
-          className={cn(
-            "hidden size-8 shrink-0 items-center justify-center transition-colors duration-200 sm:flex",
-            expanded ? "text-muted-foreground" : "text-muted-foreground/30"
-          )}
-        >
-          <HugeiconsIcon
-            icon={QuillWrite02Icon}
-            size={18}
-            strokeWidth={1.5}
-          />
-        </div>
-        <DocTabs dimmed={!expanded} />
+        {/* Same 32px box as the buttons, so both ends of the bar sit 16px in.
+            With several docs, the quill shows and hides the list of them. */}
+        {severalDocs ? (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={toggleDocList}
+                  aria-label="Docs"
+                  aria-pressed={docListOpen}
+                  className={cn(
+                    "hidden size-8 shrink-0 items-center justify-center rounded-md outline-none transition-colors duration-200 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:flex",
+                    docListOpen
+                      ? "text-foreground"
+                      : expanded
+                        ? "text-muted-foreground"
+                        : "text-muted-foreground/30"
+                  )}
+                />
+              }
+            >
+              <HugeiconsIcon icon={QuillWrite02Icon} size={18} strokeWidth={1.5} />
+            </TooltipTrigger>
+            <TooltipContent side="bottom" align="start">
+              {docListOpen ? "Hide docs" : "Show docs"} <Shortcut>{`${ALT_KEY}L`}</Shortcut>
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <div
+            className={cn(
+              "hidden size-8 shrink-0 items-center justify-center transition-colors duration-200 sm:flex",
+              expanded ? "text-muted-foreground" : "text-muted-foreground/30"
+            )}
+          >
+            <HugeiconsIcon icon={QuillWrite02Icon} size={18} strokeWidth={1.5} />
+          </div>
+        )}
       </div>
 
       <div
@@ -229,6 +257,20 @@ export function Toolbar() {
         <span className="hidden px-2 text-xs tabular-nums text-muted-foreground sm:inline">
           {wordFormatter.format(words)} {words === 1 ? "word" : "words"}
         </span>
+
+        {/* On phones the quill opens this toolbar, so the docs get a button here. */}
+        {severalDocs ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={toggleDocList}
+            aria-label="Docs"
+            aria-pressed={docListOpen}
+            className={cn(BAR_BUTTON, "sm:hidden")}
+          >
+            <HugeiconsIcon icon={SidebarLeftIcon} size={16} strokeWidth={1.5} />
+          </Button>
+        ) : null}
 
         <Tooltip>
           <TooltipTrigger

@@ -48,6 +48,7 @@ interface EditorState {
   addDoc: (html: string) => Doc | null;
   switchDoc: (id: string) => void;
   switchDocBy: (offset: number) => void;
+  moveDoc: (from: number, to: number) => void;
   closeDoc: (id: string) => void;
   undoClose: () => void;
   dismissUndoClose: () => void;
@@ -170,6 +171,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const index = docs.findIndex((d) => d.id === activeId);
     const next = docs[(index + offset + docs.length) % docs.length];
     if (next) switchDoc(next.id);
+  },
+
+  moveDoc: (from, to) => {
+    const docs = [...get().docs];
+    if (from === to || !docs[from] || to < 0 || to >= docs.length) return;
+    const [doc] = docs.splice(from, 1);
+    docs.splice(to, 0, doc);
+    persistDocs(docs);
+    set({ docs });
   },
 
   closeDoc: (id) => {

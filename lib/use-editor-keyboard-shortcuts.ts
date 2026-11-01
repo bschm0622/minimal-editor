@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import type { Editor } from "@tiptap/core";
 import { copyEditorContentAsMarkdown } from "./editor-copy-actions";
+import { useDocListUI } from "./doc-list-ui";
 import { useEditorStore } from "./editor-store";
 
 type EditorKeyboardShortcutOptions = {
@@ -39,6 +40,12 @@ export function useEditorKeyboardShortcuts(
         if (event.code === "KeyN") {
           event.preventDefault();
           store.newDoc();
+          return;
+        }
+
+        if (event.code === "KeyL" && store.docs.length > 1) {
+          event.preventDefault();
+          useDocListUI.getState().toggle();
           return;
         }
 

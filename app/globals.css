@@ -518,6 +518,16 @@
   }
 }
 
+/*
+ * Same for the doc list in the left margin: 768px of text plus 232px either
+ * side. Never more than the list's width, so a narrow window keeps its text.
+ */
+@media (min-width: 640px) {
+  [data-doc-list="open"] {
+    padding-left: clamp(0px, calc(1232px - 100vw), 232px);
+  }
+}
+
 /* The open panel lists the versions already. */
 [data-alt-panel="open"] .tiptap .alt-count {
   display: none;

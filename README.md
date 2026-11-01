@@ -5,7 +5,7 @@ A deliberately simple writing app. Try it at
 
 Docs live in your browser. There are no accounts, no server and no files to
 open or save: every doc autosaves locally as you type, and you can keep
-several docs open as tabs.
+several docs open at once.
 
 Any word, sentence or paragraph can hold several versions you switch between
 in place and keep one of. An AI agent can add versions too, but the app has no
@@ -15,7 +15,8 @@ AI built in: your own agent drives the page in your own browser (see
 ## Features
 
 - Clean rich-text writing surface with Markdown-friendly shortcuts
-- Multiple docs as tabs, each named after its first line
+- Multiple docs in a list down the left, each named after its first line;
+  drag to reorder
 - Per-doc undo history and scroll position
 - Slash menu for common block types
 - Paste Markdown directly into the editor

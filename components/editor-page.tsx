@@ -2,9 +2,11 @@
 
 import { useLayoutEffect } from "react";
 import { useAlternativesUI } from "@/lib/alternatives-ui";
+import { useDocListUI } from "@/lib/doc-list-ui";
 import { useEditorStore } from "@/lib/editor-store";
 import { AlternativesPanel } from "@/components/alternatives-panel";
 import { Announcer } from "@/components/announcer";
+import { DocList } from "@/components/doc-list";
 import { Editor } from "@/components/editor";
 import { Toolbar } from "@/components/toolbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +16,8 @@ export function EditorPage() {
   const hydrated = useEditorStore((state) => state.hydrated);
   const hydrate = useEditorStore((state) => state.hydrate);
   const panelOpen = useAlternativesUI((state) => state.panelOpen);
+  const docListOpen = useDocListUI((state) => state.open);
+  const severalDocs = useEditorStore((state) => state.docs.length > 1);
 
   useLayoutEffect(() => {
     const previousScrollRestoration = history.scrollRestoration;
@@ -66,9 +70,11 @@ export function EditorPage() {
         <main
           className="flex flex-1 flex-col pt-12"
           data-alt-panel={panelOpen ? "open" : undefined}
+          data-doc-list={docListOpen && severalDocs ? "open" : undefined}
         >
           <Editor />
         </main>
+        <DocList />
         <AlternativesPanel />
         <Announcer />
       </div>

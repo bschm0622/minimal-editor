@@ -23,6 +23,7 @@ const SHORTCUTS = [
   { key: IS_MAC ? "⌘⇧C" : "Ctrl+Shift+C", description: "Copy the doc as Markdown" },
   { key: `${ALT_KEY}N`, description: "New doc" },
   { key: `${ALT_KEY}W`, description: "Close doc" },
+  { key: `${ALT_KEY}L`, description: "Show or hide the list of docs" },
   { key: `${ALT_KEY}[ / ]`, description: "Previous / next doc" },
   { key: `${ALT_KEY}1–9`, description: "Jump to a doc" },
   { key: `${ALT_KEY}↑ / ↓`, description: "Switch between alternatives" },
@@ -38,7 +39,7 @@ const FEATURES = [
   "Paste Markdown and it turns into rich text.",
   "Select text for a small bar to format it, copy it as Markdown, add an alternative or dim it.",
   "Text with a dotted underline has other versions. Put the cursor in it to see how many.",
-  "A doc's tab is named after its first line.",
+  "With several docs, click the quill to list them down the left. Drag one to reorder. Each is named after its first line.",
 ];
 
 function SectionLabel({ children }: { children: string }) {
